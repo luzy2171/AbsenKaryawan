@@ -26,16 +26,29 @@
             </div>
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link active" href="{{ url('/dashboard') }}"><i class="bi bi-grid me-2"></i> Dashboard</a>
+                    <a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ url('/dashboard') }}">
+                        <i class="bi bi-grid me-2"></i> Dashboard
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url('/karyawan') }}"><i class="bi bi-people me-2"></i> Karyawan</a>
+                    <a class="nav-link {{ request()->is('karyawan*') ? 'active' : '' }}" href="{{ url('/karyawan') }}">
+                        <i class="bi bi-people me-2"></i> Karyawan
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url('/absensi') }}"><i class="bi bi-calendar-check me-2"></i> Absensi</a>
+                    <a class="nav-link {{ request()->is('absensi*') ? 'active' : '' }}" href="{{ url('/absensi') }}">
+                        <i class="bi bi-calendar-check me-2"></i> Absensi
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url('/pengaturan') }}"><i class="bi bi-gear me-2"></i> Pengaturan</a>
+                    <a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}" href="{{ url('/admin/settings') }}">
+                        <i class="bi bi-clock-history me-2"></i> Set Jam Kerja
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('pengaturan*') ? 'active' : '' }}" href="{{ url('/pengaturan') }}">
+                        <i class="bi bi-gear me-2"></i> Kontrol Mesin
+                    </a>
                 </li>
             </ul>
         </div>

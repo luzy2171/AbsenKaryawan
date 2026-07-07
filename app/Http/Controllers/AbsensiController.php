@@ -8,6 +8,7 @@ use App\Models\Attendance;
 use App\Services\AbsensiService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class AbsensiController extends Controller
 {
@@ -89,7 +90,7 @@ class AbsensiController extends Controller
     }
 
     /**
-     * PERBAIKAN LOGIKA: Memproses Penarikan Data Log Mesin Tanpa Duplikasi Baris Baru
+     * PERBAIKAN LOGIKA: Memproses Penarikan Data Log Mesin Berdasarkan Pengaturan Jam Kerja Dinamis (ANTI-DUPLIKASI)
      */
     public function tarikDataDariMesin(AbsensiService $absensiService)
     {
@@ -99,6 +100,11 @@ class AbsensiController extends Controller
         if (empty($rawLogs)) {
             return back()->with('error', 'Tidak ada data log absensi baru dalam 3 bulan terakhir atau koneksi mesin terputus.');
         }
+
+        // 2. AMBIL PARAMETER DINAMIS DARI DATABASE SETTINGS (DENGAN FALLBACK DEFAULT)
+        $jamMasukSetting = DB::table('settings')->where('key', 'jam_masuk')->value('value') ?? '08:00';
+        $toleransi       = DB::table('settings')->where('key', 'toleransi_terlambat')->value('value') ?? '15';
+        $batasWaktuMasuk = Carbon::createFromFormat('H:i', $jamMasukSetting)->addMinutes((int)$toleransi)->format('H:i:s');
 
         $dataMasukBaru = 0;
         $dataPulangDiupdate = 0;
@@ -118,14 +124,14 @@ class AbsensiController extends Controller
                 $jam = $timestamp->toTimeString();
                 $methodVerifikasi = $log['verified'] == '1' ? 'Sidik Jari' : 'Password/Lainnya';
 
-                // 2. KUNCI UTAMA: Cek apakah karyawan ini SUDAH memiliki catatan absensi PADA TANGGAL TERSEBUT
+                // 3. CEK KETAT: Apakah karyawan ini SUDAH memiliki catatan absensi PADA TANGGAL TERSEBUT
                 $attendanceHariIni = Attendance::where('karyawan_id', $karyawan->id)
                                                ->where('tanggal', $tanggal)
                                                ->first();
 
                 if (!$attendanceHariIni) {
-                    // JIKA BELUM ADA RECORD DI TANGGAL ITU: Berarti ini adalah Tap Pertama (Jam Masuk)
-                    $statusKehadiran = ($jam > '08:00:00') ? 'Terlambat' : 'Hadir';
+                    // JIKA BELUM ADA RECORD DI TANGGAL ITU: Masuk sebagai scan pertama (Jam Masuk)
+                    $statusKehadiran = ($jam > $batasWaktuMasuk) ? 'Terlambat' : 'Hadir';
 
                     Attendance::create([
                         'karyawan_id' => $karyawan->id,
@@ -138,13 +144,15 @@ class AbsensiController extends Controller
 
                     $dataMasukBaru++;
                 } else {
-                    // JIKA SUDAH ADA RECORD DI TANGGAL ITU: Update kolom jam_pulang yang sudah ada, JANGAN membuat baris baru!
+                    // JIKA SUDAH ADA RECORD DI TANGGAL ITU: Update kolom jam_pulang yang sudah ada, JANGAN buat baris baru!
                     if ($jam > $attendanceHariIni->jam_masuk) {
-                        $attendanceHariIni->update([
-                            'jam_pulang' => $jam
-                        ]);
-
-                        $dataPulangDiupdate++;
+                        // Pastikan tidak menimpa data jam_pulang lama jika jam scan baru bernilai lebih kecil/sama
+                        if (is_null($attendanceHariIni->jam_pulang) || $jam > $attendanceHariIni->jam_pulang) {
+                            $attendanceHariIni->update([
+                                'jam_pulang' => $jam
+                            ]);
+                            $dataPulangDiupdate++;
+                        }
                     }
                 }
             }
@@ -171,7 +179,7 @@ class AbsensiController extends Controller
         // Membangun query dasar log absensi dalam rentang tanggal
         $query = Attendance::with('karyawan')->whereBetween('tanggal', [$mulai, $selesai]);
 
-        // UPDATE: Saring query jika admin memilih karyawan tertentu dari dropdown select
+        // Saring query jika admin memilih karyawan tertentu dari dropdown select
         if ($karyawanId && $karyawanId !== 'semua') {
             $query->where('karyawan_id', $karyawanId);
         }
@@ -190,11 +198,9 @@ class AbsensiController extends Controller
             $jamPulangExist = $att->jam_pulang ? date('H:i', strtotime($att->jam_pulang)) : null;
 
             if (!isset($cleanedAttendances[$key])) {
-                // Jika data awal belum dimasukkan ke penampung cleaned
                 $masuk = $jamScan;
                 $pulang = $jamPulangExist;
 
-                // Fallback: Jika scan tunggal terdeteksi di sore hari (>= 12:00), geser ke kolom pulang
                 if ($jamScan && !$pulang && $jamScan >= '12:00') {
                     $pulang = $jamScan;
                     $masuk = null;
@@ -209,7 +215,6 @@ class AbsensiController extends Controller
                     'status'      => $att->status
                 ];
             } else {
-                // Jika baris duplikat ditemukan di database, lebur nilainya ke record yang sudah ada
                 if ($jamScan) {
                     if ($jamScan >= '12:00') {
                         if (!$cleanedAttendances[$key]['jam_pulang'] || $jamScan > $cleanedAttendances[$key]['jam_pulang']) {

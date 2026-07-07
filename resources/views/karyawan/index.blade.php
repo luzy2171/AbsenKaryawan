@@ -18,45 +18,63 @@
 
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar Menu Navigasi -->
         <div class="col-md-2 sidebar p-3 d-none d-md-block">
             <div class="d-flex align-items-center mb-4 px-2">
                 <i class="bi bi-fingerprint text-success fs-3 me-2"></i>
                 <h5 class="fw-bold m-0 text-success">Absensi-BBM</h5>
             </div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="{{ url('/dashboard') }}"><i class="bi bi-grid me-2"></i> Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link active" href="{{ url('/karyawan') }}"><i class="bi bi-people me-2"></i> Karyawan</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url('/absensi') }}"><i class="bi bi-calendar-check me-2"></i> Absensi</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url('/pengaturan') }}"><i class="bi bi-gear me-2"></i> Pengaturan</a></li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ url('/dashboard') }}">
+                        <i class="bi bi-grid me-2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('karyawan*') ? 'active' : '' }}" href="{{ url('/karyawan') }}">
+                        <i class="bi bi-people me-2"></i> Karyawan
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('absensi*') ? 'active' : '' }}" href="{{ url('/absensi') }}">
+                        <i class="bi bi-calendar-check me-2"></i> Absensi
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}" href="{{ url('/admin/settings') }}">
+                        <i class="bi bi-clock-history me-2"></i> Set Jam Kerja
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('pengaturan*') ? 'active' : '' }}" href="{{ url('/pengaturan') }}">
+                        <i class="bi bi-gear me-2"></i> Kontrol Mesin
+                    </a>
+                </li>
             </ul>
         </div>
 
-        <!-- Bagian Konten Utama -->
         <div class="col-md-10 p-4">
             <div class="card card-custom p-4 bg-white">
 
-                <!-- Header Atas (Aksi Cepat) -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h4 class="fw-bold m-0">Data Karyawan</h4>
+                    <div>
+                        <h4 class="fw-bold m-0">Data Karyawan</h4>
+                        <small class="text-muted">{{ count($karyawans) }} total record terdaftar</small>
+                    </div>
 
                     <div class="d-flex gap-2">
-                        <!-- TOMBOL SINKRONISASI DATA DARI MESIN ABSENSI -->
-                        <form action="{{ route('karyawan.sync-mesin') }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menarik semua data user aktif dari mesin fisik ke database lokal web?');">
+                        <form action="{{ route('karyawan.sync-mesin') }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menarik semua data user aktif dari mesin fisik ke database lokal web?');" class="m-0">
                             @csrf
                             <button type="submit" class="btn btn-outline-success">
                                 <i class="bi bi-arrow-clockwise"></i> Sinkronisasi dari Mesin
                             </button>
                         </form>
 
-                        <!-- Tombol Tambah Karyawan Manual -->
                         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalTambahKaryawan">
                             <i class="bi bi-plus-lg me-1"></i> Tambah Karyawan
                         </button>
                     </div>
                 </div>
 
-                <!-- Notifikasi Status Respon Laravel (Sukses / Error) -->
                 @if(session('status'))
                     <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-3" role="alert">
                         <i class="bi bi-check-circle-fill me-2"></i>{{ session('status') }}
@@ -70,7 +88,6 @@
                     </div>
                 @endif
 
-                <!-- Tabel Data Karyawan -->
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
@@ -114,7 +131,6 @@
     </div>
 </div>
 
-<!-- Modal Form Tambah Karyawan Manual -->
 <div class="modal fade" id="modalTambahKaryawan" tabindex="-1" aria-labelledby="modalTambahKaryawanLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -126,21 +142,21 @@
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="id_karyawan" class="form-label small fw-semibold">ID Karyawan / PIN Mesin</label>
-                        <input type="text" name="id_karyawan" id="id_karyawan" class="form-control" placeholder="Contoh: 6" required>
+                        <label class="form-label small fw-semibold">ID Karyawan / PIN Mesin</label>
+                        <input type="text" name="id_karyawan" class="form-control" placeholder="Contoh: 6" required>
                         <div class="form-text text-muted extra-small">Pastikan ID berupa angka unik dan cocok dengan registrasi sidik jari di mesin.</div>
                     </div>
                     <div class="mb-3">
-                        <label for="nama" class="form-label small fw-semibold">Nama Lengkap</label>
-                        <input type="text" name="nama" id="nama" class="form-control" placeholder="Nama Karyawan" required>
+                        <label class="form-label small fw-semibold">Nama Lengkap</label>
+                        <input type="text" name="nama" class="form-control" placeholder="Nama Karyawan" required>
                     </div>
                     <div class="mb-3">
-                        <label for="departemen" class="form-label small fw-semibold">Departemen</label>
-                        <input type="text" name="departemen" id="departemen" class="form-control" placeholder="Contoh: IT, HRD, GA">
+                        <label class="form-label small fw-semibold">Departemen</label>
+                        <input type="text" name="departemen" class="form-control" placeholder="Contoh: IT, HRD, GA">
                     </div>
                     <div class="mb-3">
-                        <label for="jabatan" class="form-label small fw-semibold">Jabatan</label>
-                        <input type="text" name="jabatan" id="jabatan" class="form-control" placeholder="Contoh: Software Engineer">
+                        <label class="form-label small fw-semibold">Jabatan</label>
+                        <input type="text" name="jabatan" class="form-control" placeholder="Contoh: Software Engineer">
                     </div>
                 </div>
                 <div class="modal-footer">

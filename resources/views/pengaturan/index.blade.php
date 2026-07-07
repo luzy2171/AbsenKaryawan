@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pengaturan Perangkat - AbsensiPro</title>
+    <title>Kontrol Perangkat - Absensi-BBM</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
@@ -19,39 +19,67 @@
 
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar Menu -->
         <div class="col-md-2 sidebar p-3 d-none d-md-block">
             <div class="d-flex align-items-center mb-4 px-2">
                 <i class="bi bi-fingerprint text-success fs-3 me-2"></i>
-                <h5 class="fw-bold m-0 text-success">AbsensiPro</h5>
+                <h5 class="fw-bold m-0 text-success">Absensi-BBM</h5>
             </div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link menu" href="{{ url('/dashboard') }}"><i class="bi bi-grid me-2"></i> Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link menu" href="{{ url('/karyawan') }}"><i class="bi bi-people me-2"></i> Karyawan</a></li>
-                <li class="nav-item"><a class="nav-link menu" href="{{ url('/absensi') }}"><i class="bi bi-calendar-check me-2"></i> Absensi</a></li>
-                <li class="nav-item"><a class="nav-link menu active" href="{{ url('/pengaturan') }}"><i class="bi bi-gear me-2"></i> Pengaturan</a></li>
+                <li class="nav-item">
+                    <a class="nav-link menu {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ url('/dashboard') }}">
+                        <i class="bi bi-grid me-2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link menu {{ request()->is('karyawan*') ? 'active' : '' }}" href="{{ url('/karyawan') }}">
+                        <i class="bi bi-people me-2"></i> Karyawan
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link menu {{ request()->is('absensi*') ? 'active' : '' }}" href="{{ url('/absensi') }}">
+                        <i class="bi bi-calendar-check me-2"></i> Absensi
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link menu {{ request()->is('admin/settings*') ? 'active' : '' }}" href="{{ url('/admin/settings') }}">
+                        <i class="bi bi-clock-history me-2"></i> Set Jam Kerja
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link menu {{ request()->is('pengaturan*') ? 'active' : '' }}" href="{{ url('/pengaturan') }}">
+                        <i class="bi bi-gear me-2"></i> Kontrol Mesin
+                    </a>
+                </li>
             </ul>
         </div>
 
-        <!-- Konten Utama: Pusat Kontrol Perangkat -->
         <div class="col-md-10 p-4">
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h4 class="fw-bold m-0">Pusat Kendali SDK Mesin</h4>
+                    <small class="text-muted">Interaksi perangkat keras dan pemeliharaan data bio-memori</small>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-3 fw-semibold">Administrator</span>
+                    <i class="bi bi-person-circle fs-3 text-secondary"></i>
+                </div>
+            </div>
 
             @if(session('status'))
                 <div class="alert alert-success border-0 shadow-sm mb-3 alert-dismissible fade show" role="alert">
-                    {{ session('status') }}
+                    <i class="bi bi-check-circle-fill me-2"></i> {{ session('status') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
             @if(session('error'))
                 <div class="alert alert-danger border-0 shadow-sm mb-3 alert-dismissible fade show" role="alert">
-                    {{ session('error') }}
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('error') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
 
-            <!-- PANEL ATAS: STATUS MESIN & AKSI CEPAT SDK -->
             <div class="row g-3 mb-4">
-                <!-- Info Status Perangkat -->
                 <div class="col-md-5">
                     <div class="card card-custom p-4 bg-white h-100">
                         <h6 class="text-muted small fw-bold mb-3 text-uppercase">Informasi Perangkat</h6>
@@ -72,12 +100,10 @@
                     </div>
                 </div>
 
-                <!-- Tombol Kendali Cepat SDK (Tidak Terpisah-pisah) -->
                 <div class="col-md-7">
                     <div class="card card-custom p-4 bg-white h-100">
                         <h6 class="text-muted small fw-bold mb-3 text-uppercase">Konsol Kendali Cepat SDK</h6>
                         <div class="row g-2">
-                            <!-- 1. Tarik Data Utama -->
                             <div class="col-6">
                                 <form action="{{ route('absensi.tarik') }}" method="POST">
                                     @csrf
@@ -86,7 +112,6 @@
                                     </button>
                                 </form>
                             </div>
-                            <!-- 2. Sync Jam Alat -->
                             <div class="col-6">
                                 <form action="{{ route('pengaturan.sync-time') }}" method="POST">
                                     @csrf
@@ -95,7 +120,6 @@
                                     </button>
                                 </form>
                             </div>
-                            <!-- 3. Remote Reboot -->
                             <div class="col-6">
                                 <form action="{{ route('pengaturan.restart') }}" method="POST" onsubmit="return confirm('Reboot mesin absensi? Perangkat tidak dapat memindai selama proses mulai ulang.');">
                                     @csrf
@@ -104,7 +128,6 @@
                                     </button>
                                 </form>
                             </div>
-                            <!-- 4. Kosongkan Log Transaksi -->
                             <div class="col-6">
                                 <form action="{{ route('pengaturan.clear') }}" method="POST" onsubmit="return confirm('Hapus seluruh transaksi di dalam memori mesin fisik? Data lokal di database web tetap aman.');">
                                     @csrf
@@ -118,23 +141,21 @@
                 </div>
             </div>
 
-            <!-- PANEL BAWAH: DATA VIEWER & DATA INTERAKSI SDK -->
             <div class="card card-custom p-4 bg-white">
                 <ul class="nav nav-pills mb-3 border-bottom pb-2" id="sdkTab" role="tablist">
-                    <li class="nav-item">
-                        <a class="nav-link active small" id="user-tab" data-bs-toggle="tab" href="#tab-user"><i class="bi bi-people me-1"></i> Data Karyawan Perangkat</a>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active small" id="user-tab" data-bs-toggle="tab" data-bs-target="#tab-user" type="button" role="tab"><i class="bi bi-people me-1"></i> Data Karyawan Perangkat</button>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link small" id="fp-tab" data-bs-toggle="tab" href="#tab-fp"><i class="bi bi-fingerprint me-1"></i> Pengelola Sidik Jari</a>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link small" id="fp-tab" data-bs-toggle="tab" data-bs-target="#tab-fp" type="button" role="tab"><i class="bi bi-fingerprint me-1"></i> Pengelola Sidik Jari</button>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link small" id="log-tab" data-bs-toggle="tab" href="#tab-log"><i class="bi bi-file-earmark-text me-1"></i> Riwayat Log Mentah</a>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link small" id="log-tab" data-bs-toggle="tab" data-bs-target="#tab-log" type="button" role="tab"><i class="bi bi-file-earmark-text me-1"></i> Riwayat Log Mentah</button>
                     </li>
                 </ul>
 
-                <div class="tab-content pt-2">
-                    <!-- Tab User: Ambil Data & Hapus User dari Mesin -->
-                    <div class="tab-pane fade show active" id="tab-user" role="tabpanel">
+                <div class="tab-content pt-2" id="sdkTabContent">
+                    <div class="tab-pane fade show active" id="tab-user" role="tabpanel" aria-labelledby="user-tab">
                         <div class="row g-4">
                             <div class="col-md-7 border-end">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
@@ -177,15 +198,14 @@
                         </div>
                     </div>
 
-                    <!-- Tab Sidik Jari: Download, Upload & Hapus Template -->
-                    <div class="tab-pane fade" id="tab-fp" role="tabpanel">
+                    <div class="tab-pane fade" id="tab-fp" role="tabpanel" aria-labelledby="fp-tab">
                         <div class="row g-4">
                             <div class="col-md-6 border-end">
                                 <h6 class="fw-bold text-success small mb-2"><i class="bi bi-download me-1"></i> Ambil & Download Template</h6>
                                 <form action="{{ route('pengaturan.index') }}" method="GET" class="row g-2 mb-3 align-items-end">
                                     <input type="hidden" name="download_fp" value="1">
-                                    <div class="col-5"><input type="text" name="user_id" class="form-control form-control-sm" placeholder="User ID" required></div>
-                                    <div class="col-4"><input type="number" name="finger_id" class="form-control form-control-sm" placeholder="Finger ID" value="0" required></div>
+                                    <div class="col-5"><input type="text" name="user_id" class="form-control form-control-sm" placeholder="User ID" value="{{ request('user_id') }}" required></div>
+                                    <div class="col-4"><input type="number" name="finger_id" class="form-control form-control-sm" placeholder="Finger ID" value="{{ request('finger_id') ?? '0' }}" required></div>
                                     <div class="col-3"><button type="submit" class="btn btn-success btn-sm w-100">Ambil</button></div>
                                 </form>
                                 @if(!empty($templates))
@@ -210,8 +230,8 @@
                                             <textarea name="template" id="fpTemplateArea" class="form-control form-control-sm" rows="2" placeholder="Paste string template sidik jari (khusus untuk upload)..."></textarea>
                                         </div>
                                         <div class="d-flex gap-2">
-                                            <button type="submit" onclick="submitFpForm('{{ route('pengaturan.upload-fp') }}')" class="btn btn-primary btn-sm w-50">Upload Data</button>
-                                            <button type="submit" onclick="submitFpForm('{{ route('pengaturan.hapus-fp') }}')" class="btn btn-outline-danger btn-sm w-50">Hapus Data</button>
+                                            <button type="button" onclick="submitFpForm('{{ route('pengaturan.upload-fp') }}', true)" class="btn btn-primary btn-sm w-50">Upload Data</button>
+                                            <button type="button" onclick="submitFpForm('{{ route('pengaturan.hapus-fp') }}', false)" class="btn btn-outline-danger btn-sm w-50">Hapus Data</button>
                                         </div>
                                     </form>
                                 </div>
@@ -219,8 +239,7 @@
                         </div>
                     </div>
 
-                    <!-- Tab Log Mentah: Log Transaksi Mesin Terkombinasi Nama -->
-                    <div class="tab-pane fade" id="tab-log" role="tabpanel">
+                    <div class="tab-pane fade" id="tab-log" role="tabpanel" aria-labelledby="log-tab">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <span class="text-muted small fw-semibold">Log Transaksi Aktivitas Mesin Terkini</span>
                             <a href="{{ route('pengaturan.index', ['view_logs' => 1]) }}" class="btn btn-sm btn-outline-primary">
@@ -259,16 +278,39 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Script pembantu perpindahan aksi form upload/delete sidik jari
-    function submitFpForm(actionUrl) {
+    // FIX BUG: Script pengunci tab aktif setelah memuat ulang halaman
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let activeTabId = "#user-tab"; // Default tab
+
+        if (urlParams.has('view_users')) {
+            activeTabId = "#user-tab";
+        } else if (urlParams.has('download_fp')) {
+            activeTabId = "#fp-tab";
+        } else if (urlParams.has('view_logs')) {
+            activeTabId = "#log-tab";
+        }
+
+        const triggerEl = document.querySelector(activeTabId);
+        if (triggerEl) {
+            const tab = new bootstrap.Tab(triggerEl);
+            tab.show();
+        }
+    });
+
+    // FIX BUG: Perbaikan aksi routing ganda form data sidik jari manual
+    function submitFpForm(actionUrl, isUpload) {
         const form = document.getElementById('fpActionForm');
         const templateArea = document.getElementById('fpTemplateArea');
 
-        if (actionUrl.includes('hapus-fp')) {
-            templateArea.removeAttribute('required');
-            if(!confirm('Hapus template sidik jari dari mesin?')) return;
+        if (isUpload) {
+            if (!templateArea.value.trim()) {
+                alert('String template wajib diisi untuk melakukan upload data.');
+                templateArea.focus();
+                return;
+            }
         } else {
-            templateArea.setAttribute('required', 'required');
+            if(!confirm('Hapus template sidik jari ini dari memori mesin fisik?')) return;
         }
 
         form.action = actionUrl;

@@ -18,25 +18,43 @@
 
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar Menu Navigasi -->
         <div class="col-md-2 sidebar p-3 d-none d-md-block">
             <div class="d-flex align-items-center mb-4 px-2">
                 <i class="bi bi-fingerprint text-success fs-3 me-2"></i>
                 <h5 class="fw-bold m-0 text-success">Absensi-BBM</h5>
             </div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link" href="{{ url('/dashboard') }}"><i class="bi bi-grid me-2"></i> Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url('/karyawan') }}"><i class="bi bi-people me-2"></i> Karyawan</a></li>
-                <li class="nav-item"><a class="nav-link active" href="{{ url('/absensi') }}"><i class="bi bi-calendar-check me-2"></i> Absensi</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url('/pengaturan') }}"><i class="bi bi-gear me-2"></i> Pengaturan</a></li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ url('/dashboard') }}">
+                        <i class="bi bi-grid me-2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('karyawan*') ? 'active' : '' }}" href="{{ url('/karyawan') }}">
+                        <i class="bi bi-people me-2"></i> Karyawan
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('absensi*') ? 'active' : '' }}" href="{{ url('/absensi') }}">
+                        <i class="bi bi-calendar-check me-2"></i> Absensi
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}" href="{{ url('/admin/settings') }}">
+                        <i class="bi bi-clock-history me-2"></i> Set Jam Kerja
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('pengaturan*') ? 'active' : '' }}" href="{{ url('/pengaturan') }}">
+                        <i class="bi bi-gear me-2"></i> Kontrol Mesin
+                    </a>
+                </li>
             </ul>
         </div>
 
-        <!-- Bagian Konten Utama Halaman Absensi -->
         <div class="col-md-10 p-4">
             <div class="card card-custom p-4 bg-white">
 
-                <!-- Header Atas (Aksi Cepat & Kontrol Otomatisasi) -->
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
                         <h4 class="fw-bold m-0">Absensi</h4>
@@ -44,7 +62,6 @@
                     </div>
 
                     <div class="d-flex gap-3 align-items-center">
-                        <!-- FORM SAKELAR ON/OFF SINKRONISASI OTOMATIS -->
                         <form action="{{ route('absensi.toggle-auto') }}" method="POST" id="formToggleAuto" class="border rounded px-3 py-2 bg-light d-flex align-items-center gap-3 m-0">
                             @csrf
                             <div class="lh-sm">
@@ -58,7 +75,6 @@
                             </div>
                         </form>
 
-                        <!-- Tombol Tarik Data Manual -->
                         <form action="{{ route('absensi.tarik') }}" method="POST" onsubmit="return confirm('Mulai tarik log kehadiran 3 bulan terakhir dari mesin absensi fisik?');" class="m-0">
                             @csrf
                             <button type="submit" class="btn btn-success fw-semibold">
@@ -68,21 +84,19 @@
                     </div>
                 </div>
 
-                <!-- Notifikasi Status Flash Session Laravel -->
                 @if(session('status'))
                     <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-3" role="alert">
                         <i class="bi bi-check-circle-fill me-2"></i>{{ session('status') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-alert="close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 @endif
                 @if(session('error'))
                     <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-3" role="alert">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ session('error') }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-alert="close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 @endif
 
-                <!-- Form Filter Pencarian Data Harian -->
                 <form action="{{ route('absensi.index') }}" method="GET" class="row g-2 mb-3 align-items-center">
                     <div class="col-md-4">
                         <div class="input-group">
@@ -106,7 +120,6 @@
                     </div>
                 </form>
 
-                <!-- Form Filter Cetak Absensi Bulanan / Rentang Tanggal dengan Pilihan Karyawan (Fix visual dari image_eb1786.png) -->
                 <div class="card bg-light border-0 p-3 mb-4 rounded-3 shadow-sm">
                     <form action="{{ route('absensi.cetak') }}" method="GET" target="_blank" class="row g-2 align-items-end">
                         <div class="col-md-3">
@@ -134,7 +147,6 @@
                     </form>
                 </div>
 
-                <!-- Tabel Riwayat Kehadiran Database Internal -->
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead class="table-light text-muted small">
@@ -147,7 +159,7 @@
                                 <th>STATUS</th>
                                 <th>VERIFIKASI</th>
                             </tr>
-                        </thead>
+                        </thead >
                         <tbody>
                             @forelse($attendances as $item)
                             <tr class="small">
@@ -194,7 +206,6 @@
     </div>
 </div>
 
-<!-- Script Pemicu Submit Sakelar Otomatis -->
 <script>
     function submitToggleAuto() {
         const checkbox = document.getElementById('autoPullSwitch');
