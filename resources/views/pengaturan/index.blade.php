@@ -13,12 +13,14 @@
         .nav-link.menu.active { background-color: #e8f5e9; color: #2e7d32; font-weight: bold; }
         .card-custom { border: none; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
         .status-indicator { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+        .extra-small { font-size: 0.75rem; }
     </style>
 </head>
 <body>
 
 <div class="container-fluid">
     <div class="row">
+        <!-- Sidebar Menu Navigasi Terpadu -->
         <div class="col-md-2 sidebar p-3 d-none d-md-block">
             <div class="d-flex align-items-center mb-4 px-2">
                 <i class="bi bi-fingerprint text-success fs-3 me-2"></i>
@@ -53,6 +55,7 @@
             </ul>
         </div>
 
+        <!-- Konten Utama: Pusat Kontrol Perangkat -->
         <div class="col-md-10 p-4">
 
             <div class="d-flex justify-content-between align-items-center mb-4">
@@ -79,7 +82,9 @@
                 </div>
             @endif
 
+            <!-- PANEL ATAS: STATUS MESIN & AKSI CEPAT SDK -->
             <div class="row g-3 mb-4">
+                <!-- Info Status Perangkat -->
                 <div class="col-md-5">
                     <div class="card card-custom p-4 bg-white h-100">
                         <h6 class="text-muted small fw-bold mb-3 text-uppercase">Informasi Perangkat</h6>
@@ -93,25 +98,39 @@
                         <hr class="text-muted my-2">
                         <div class="d-flex justify-content-between align-items-center mt-2">
                             <span class="small fw-semibold">Status Koneksi Jaringan:</span>
-                            <span class="badge bg-success-subtle text-success px-2 py-1">
-                                <span class="status-indicator bg-success me-1"></span> Terhubung (Online)
-                            </span>
+                            @if(!empty($users))
+                                <span class="badge bg-success-subtle text-success px-2 py-1">
+                                    <span class="status-indicator bg-success me-1"></span> Terhubung (Online)
+                                </span>
+                            @else
+                                <span class="badge bg-danger-subtle text-danger px-2 py-1">
+                                    <span class="status-indicator bg-danger me-1"></span> Offline / Data Kosong
+                                </span>
+                            @endif
                         </div>
                     </div>
                 </div>
 
+                <!-- Tombol Kendali Cepat SDK -->
                 <div class="col-md-7">
                     <div class="card card-custom p-4 bg-white h-100">
                         <h6 class="text-muted small fw-bold mb-3 text-uppercase">Konsol Kendali Cepat SDK</h6>
                         <div class="row g-2">
+                            <!-- 1. Tarik Data Utama (VALIDASI KETAT DARI DOKER/SOAP) -->
                             <div class="col-6">
                                 <form action="{{ route('absensi.tarik') }}" method="POST">
                                     @csrf
-                                    <button type="submit" class="btn btn-light border w-100 text-start py-2 small fw-semibold">
-                                        <i class="bi bi-cloud-arrow-down text-primary me-2"></i> Sinkronisasi Log Masuk
+                                    <button type="submit"
+                                            class="btn btn-light border w-100 text-start py-2 small fw-semibold {{ empty($users) ? 'disabled text-muted' : '' }}"
+                                            {{ empty($users) ? 'disabled' : '' }}>
+                                        <i class="bi bi-cloud-arrow-down {{ empty($users) ? 'text-secondary' : 'text-primary' }} me-2"></i> Sinkronisasi Log Masuk
                                     </button>
                                 </form>
+                                @if(empty($users))
+                                    <small class="text-danger extra-small mt-1 d-block"><i class="bi bi-exclamation-circle me-1"></i>Data user mesin kosong. Akses tarik dikunci.</small>
+                                @endif
                             </div>
+                            <!-- 2. Sync Jam Alat -->
                             <div class="col-6">
                                 <form action="{{ route('pengaturan.sync-time') }}" method="POST">
                                     @csrf
@@ -120,6 +139,7 @@
                                     </button>
                                 </form>
                             </div>
+                            <!-- 3. Remote Reboot -->
                             <div class="col-6">
                                 <form action="{{ route('pengaturan.restart') }}" method="POST" onsubmit="return confirm('Reboot mesin absensi? Perangkat tidak dapat memindai selama proses mulai ulang.');">
                                     @csrf
@@ -128,6 +148,7 @@
                                     </button>
                                 </form>
                             </div>
+                            <!-- 4. Kosongkan Log Transaksi -->
                             <div class="col-6">
                                 <form action="{{ route('pengaturan.clear') }}" method="POST" onsubmit="return confirm('Hapus seluruh transaksi di dalam memori mesin fisik? Data lokal di database web tetap aman.');">
                                     @csrf
@@ -141,6 +162,7 @@
                 </div>
             </div>
 
+            <!-- PANEL BAWAH: DATA VIEWER & DATA INTERAKSI SDK -->
             <div class="card card-custom p-4 bg-white">
                 <ul class="nav nav-pills mb-3 border-bottom pb-2" id="sdkTab" role="tablist">
                     <li class="nav-item" role="presentation">
@@ -155,13 +177,14 @@
                 </ul>
 
                 <div class="tab-content pt-2" id="sdkTabContent">
+                    <!-- Tab User: Ambil Data & Hapus User dari Mesin -->
                     <div class="tab-pane fade show active" id="tab-user" role="tabpanel" aria-labelledby="user-tab">
                         <div class="row g-4">
                             <div class="col-md-7 border-end">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <span class="text-muted small fw-semibold">Daftar Pengguna Aktif di Memori Alat</span>
                                     <a href="{{ route('pengaturan.index', ['view_users' => 1]) }}" class="btn btn-sm btn-outline-success">
-                                        <i class="bi bi-arrow-repeat me-1"></i> Load Data User
+                                        <i class="bi bi-arrow-repeat me-1"></i> Refresh Data User
                                     </a>
                                 </div>
                                 @if(!empty($users))
@@ -178,7 +201,10 @@
                                     </table>
                                 </div>
                                 @else
-                                <div class="text-center py-4 text-muted small">Klik tombol 'Load Data User' untuk menampilkan data dari mesin.</div>
+                                <div class="text-center py-4 text-danger small bg-light rounded border border-dashed">
+                                    <i class="bi bi-exclamation-triangle fs-3 d-block mb-1"></i>
+                                    Gagal memuat data user dari mesin absensi fisik atau tidak ada user terdaftar.
+                                </div>
                                 @endif
                             </div>
                             <div class="col-md-5">
@@ -198,6 +224,7 @@
                         </div>
                     </div>
 
+                    <!-- Tab Sidik Jari: Download, Upload & Hapus Template -->
                     <div class="tab-pane fade" id="tab-fp" role="tabpanel" aria-labelledby="fp-tab">
                         <div class="row g-4">
                             <div class="col-md-6 border-end">
@@ -239,6 +266,7 @@
                         </div>
                     </div>
 
+                    <!-- Tab Log Mentah: Log Transaksi Mesin Terkombinasi Nama -->
                     <div class="tab-pane fade" id="tab-log" role="tabpanel" aria-labelledby="log-tab">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <span class="text-muted small fw-semibold">Log Transaksi Aktivitas Mesin Terkini</span>
@@ -278,14 +306,18 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // FIX BUG: Script pengunci tab aktif setelah memuat ulang halaman
+    // AUTO-LOAD USER OTOMATIS SAAT HALAMAN DIBAKA PERTAMA KALI
     document.addEventListener("DOMContentLoaded", function() {
         const urlParams = new URLSearchParams(window.location.search);
-        let activeTabId = "#user-tab"; // Default tab
 
-        if (urlParams.has('view_users')) {
-            activeTabId = "#user-tab";
-        } else if (urlParams.has('download_fp')) {
+        // Pemicu otomatis load user jika URL dipanggil tanpa query parameter
+        if (!urlParams.has('view_users') && !urlParams.has('download_fp') && !urlParams.has('view_logs')) {
+            window.location.href = "{{ route('pengaturan.index', ['view_users' => 1]) }}";
+            return;
+        }
+
+        let activeTabId = "#user-tab";
+        if (urlParams.has('download_fp')) {
             activeTabId = "#fp-tab";
         } else if (urlParams.has('view_logs')) {
             activeTabId = "#log-tab";
@@ -298,7 +330,6 @@
         }
     });
 
-    // FIX BUG: Perbaikan aksi routing ganda form data sidik jari manual
     function submitFpForm(actionUrl, isUpload) {
         const form = document.getElementById('fpActionForm');
         const templateArea = document.getElementById('fpTemplateArea');

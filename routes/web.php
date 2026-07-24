@@ -5,7 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AbsensiController;
 use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\PengaturanController;
-use App\Http\Controllers\SettingController; // <-- IMPORT CONTROLLER JAM KERJA BARU
+use App\Http\Controllers\SettingController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,10 +24,11 @@ Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard
 // 3. Rute untuk Halaman Absensi (Tabel Catatan Absensi)
 Route::get('/absensi', [AbsensiController::class, 'index'])->name('absensi.index');
 
-// 4. Rute untuk Proses Tarik Data, Sakelar Otomatis, & Cetak Laporan di Menu Absensi
+// 4. Rute untuk Proses Tarik Data, Sakelar Otomatis, Cetak Laporan, & Export Excel
 Route::post('/absensi/tarik', [AbsensiController::class, 'tarikDataDariMesin'])->name('absensi.tarik');
 Route::post('/absensi/toggle-auto-pull', [AbsensiController::class, 'toggleAutoPull'])->name('absensi.toggle-auto');
 Route::get('/absensi/cetak', [AbsensiController::class, 'cetakLaporan'])->name('absensi.cetak');
+Route::get('/absensi/export-excel', [AbsensiController::class, 'exportExcel'])->name('absensi.export-excel');
 
 // 5. Rute Manajemen Karyawan
 Route::get('/karyawan', [KaryawanController::class, 'index'])->name('karyawan.index');
@@ -35,11 +36,11 @@ Route::post('/karyawan/store', [KaryawanController::class, 'store'])->name('kary
 Route::delete('/karyawan/{id}', [KaryawanController::class, 'destroy'])->name('karyawan.destroy');
 Route::post('/karyawan/sync-mesin', [KaryawanController::class, 'syncDariMesin'])->name('karyawan.sync-mesin');
 
-// 6. Rute Manajemen Kontrol Interface Jam Kerja Dinamis (BARU)
+// 6. Rute Manajemen Kontrol Interface Jam Kerja Dinamis
 Route::get('/admin/settings', [SettingController::class, 'index'])->name('settings.index');
 Route::post('/admin/settings', [SettingController::class, 'update'])->name('settings.update');
 
-// 7. Rute Menu Pengaturan & Pusat Kontrol SDK Mesin Lama
+// 7. Rute Menu Pengaturan & Pusat Kontrol SDK Mesin
 Route::get('/pengaturan', [PengaturanController::class, 'index'])->name('pengaturan.index');
 Route::post('/pengaturan/clear-log', [PengaturanController::class, 'clearMachineLogs'])->name('pengaturan.clear');
 Route::post('/pengaturan/hapus-user', [PengaturanController::class, 'hapusUserDariMesin'])->name('pengaturan.hapus-user');

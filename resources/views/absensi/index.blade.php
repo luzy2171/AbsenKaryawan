@@ -18,6 +18,7 @@
 
 <div class="container-fluid">
     <div class="row">
+        <!-- Sidebar Navigation -->
         <div class="col-md-2 sidebar p-3 d-none d-md-block">
             <div class="d-flex align-items-center mb-4 px-2">
                 <i class="bi bi-fingerprint text-success fs-3 me-2"></i>
@@ -52,6 +53,7 @@
             </ul>
         </div>
 
+        <!-- Main Content -->
         <div class="col-md-10 p-4">
             <div class="card card-custom p-4 bg-white">
 
@@ -87,16 +89,17 @@
                 @if(session('status'))
                     <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-3" role="alert">
                         <i class="bi bi-check-circle-fill me-2"></i>{{ session('status') }}
-                        <button type="button" class="btn-close" data-bs-alert="close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 @endif
                 @if(session('error'))
                     <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-3" role="alert">
                         <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ session('error') }}
-                        <button type="button" class="btn-close" data-bs-alert="close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 @endif
 
+                <!-- Form Filter & Pencarian -->
                 <form action="{{ route('absensi.index') }}" method="GET" class="row g-2 mb-3 align-items-center">
                     <div class="col-md-4">
                         <div class="input-group">
@@ -120,8 +123,9 @@
                     </div>
                 </form>
 
+                <!-- Form Cetak Laporan PDF & Export Excel -->
                 <div class="card bg-light border-0 p-3 mb-4 rounded-3 shadow-sm">
-                    <form action="{{ route('absensi.cetak') }}" method="GET" target="_blank" class="row g-2 align-items-end">
+                    <form action="{{ route('absensi.cetak') }}" method="GET" target="_blank" id="formLaporan" class="row g-2 align-items-end">
                         <div class="col-md-3">
                             <span class="small fw-bold text-dark d-block mb-1"><i class="bi bi-person-badge-fill text-success me-1"></i> Pilih ID / Nama:</span>
                             <select name="karyawan_id" class="form-select form-select-sm" style="padding-top: 0.38rem; padding-bottom: 0.38rem;">
@@ -139,14 +143,18 @@
                             <span class="small fw-bold text-dark d-block mb-1">Sampai Tanggal:</span>
                             <input type="date" name="tanggal_selesai" class="form-control form-control-sm" value="{{ date('Y-m-t') }}" required style="padding-top: 0.38rem; padding-bottom: 0.38rem;">
                         </div>
-                        <div class="col-md-3">
-                            <button type="submit" class="btn btn-sm btn-outline-success w-100 fw-semibold" style="padding-top: 0.38rem; padding-bottom: 0.38rem;">
-                                <i class="bi bi-file-earmark-pdf me-1"></i> Buka Halaman Cetak
+                        <div class="col-md-3 d-flex gap-2">
+                            <button type="button" onclick="submitAction('{{ route('absensi.cetak') }}', '_blank')" class="btn btn-sm btn-outline-success w-50 fw-semibold" style="padding-top: 0.38rem; padding-bottom: 0.38rem;">
+                                <i class="bi bi-printer me-1"></i> Cetak
+                            </button>
+                            <button type="button" onclick="submitAction('{{ route('absensi.export-excel') }}', '_self')" class="btn btn-sm btn-success w-50 fw-semibold" style="padding-top: 0.38rem; padding-bottom: 0.38rem;">
+                                <i class="bi bi-file-earmark-excel me-1"></i> Excel
                             </button>
                         </div>
                     </form>
                 </div>
 
+                <!-- Tabel Data Absensi -->
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead class="table-light text-muted small">
@@ -159,7 +167,7 @@
                                 <th>STATUS</th>
                                 <th>VERIFIKASI</th>
                             </tr>
-                        </thead >
+                        </thead>
                         <tbody>
                             @forelse($attendances as $item)
                             <tr class="small">
@@ -179,7 +187,7 @@
                                     {{ $item->jam_pulang ? \Carbon\Carbon::parse($item->jam_pulang)->format('H:i') : '-' }} WIB
                                 </td>
                                 <td>
-                                    <span class="badge {{ $item->status == 'Hadir' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning' }} px-2.5 py-1.5">
+                                    <span class="badge {{ $item->status == 'Hadir' ? 'bg-success-subtle text-success' : ($item->status == 'Terlambat' ? 'bg-warning-subtle text-warning' : 'bg-danger-subtle text-danger') }} px-2.5 py-1.5">
                                         {{ $item->status }}
                                     </span>
                                 </td>
@@ -217,6 +225,13 @@
             hiddenInput.value = 'OFF';
         }
         document.getElementById('formToggleAuto').submit();
+    }
+
+    function submitAction(url, target) {
+        const form = document.getElementById('formLaporan');
+        form.action = url;
+        form.target = target;
+        form.submit();
     }
 </script>
 
