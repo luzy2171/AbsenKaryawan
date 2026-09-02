@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Karyawan - Absensi-BBM</title>
+    <title>Audit Logs - Absensi-BBM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -12,11 +12,10 @@
     <style>
         :root {
             --primary-color: #2e7d32;
-            --primary-light: #4caf50;
-            --primary-dark: #1b5e20;
             --success-color: #2e7d32;
             --warning-color: #f57c00;
             --danger-color: #d32f2f;
+            --info-color: #0288d1;
             --gray-50: #fafafa;
             --gray-100: #f5f5f5;
             --gray-200: #eeeeee;
@@ -116,29 +115,14 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .modal-content {
-            border: none;
-            border-radius: 16px;
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .modal-header {
-            border-bottom: 1px solid var(--gray-200);
-            padding: 20px 24px;
-        }
-        
-        .modal-body {
-            padding: 24px;
-        }
-        
-        .form-control {
+        .form-control, .form-select {
             border-radius: 10px;
             border: 1px solid var(--gray-300);
             padding: 10px 16px;
             transition: all 0.3s ease;
         }
         
-        .form-control:focus {
+        .form-control:focus, .form-select:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
         }
@@ -158,6 +142,33 @@
         h3, h4, h5 {
             font-weight: 700;
             letter-spacing: -0.5px;
+        }
+        
+        .filter-card {
+            background: var(--gray-50);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .filter-card:hover {
+            border-color: var(--primary-color);
+        }
+        
+        .description-text {
+            max-width: 400px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .module-badge {
+            font-size: 0.7rem;
+            padding: 0.35rem 0.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
     </style>
 </head>
@@ -230,16 +241,16 @@
         <div class="col-md-10 p-4">
             <div class="d-flex justify-content-between align-items-center mb-4 fade-in">
                 <div>
-                    <h4 class="fw-bold m-0 mb-1"><i class="bi bi-people text-success me-2"></i>Data Karyawan</h4>
+                    <h4 class="fw-bold m-0 mb-1"><i class="bi bi-journal-text text-success me-2"></i>Audit Logs</h4>
                     <div class="d-flex align-items-center">
-                        <i class="bi bi-person-badge text-muted me-2"></i>
-                        <small class="text-muted">{{ count($karyawans) }} total karyawan terdaftar</small>
+                        <i class="bi bi-clock-history text-muted me-2"></i>
+                        <small class="text-muted">Riwayat aktivitas sistem dan tracking user</small>
                     </div>
                 </div>
                 <div class="d-flex align-items-center">
                     <div class="text-end me-3">
                         <p class="mb-0 fw-semibold small">{{ auth()->user()->name }}</p>
-                        <small class="text-muted">{{ auth()->user()->isSuperadmin() ? 'Superadmin' : 'Admin' }}</small>
+                        <small class="text-muted">Superadmin</small>
                     </div>
                     <div class="avatar-circle text-success">
                         {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
@@ -247,154 +258,181 @@
                 </div>
             </div>
 
-            @if(session('status'))
-                <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4 fade-in" role="alert">
-                    <i class="bi bi-check-circle-fill me-2"></i>{{ session('status') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <!-- Filter Section -->
+            <div class="filter-card mb-4 fade-in">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="fw-bold mb-0">
+                        <i class="bi bi-funnel text-primary me-2"></i>Filter Aktivitas
+                    </h6>
+                    <a href="{{ route('admin.audit-logs.index') }}" class="btn btn-light btn-sm">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Reset
+                    </a>
                 </div>
-            @endif
-            @if(session('error'))
-                <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4 fade-in" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-
-            <div class="card card-custom p-4 bg-white fade-in">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <div>
-                        <h5 class="fw-bold mb-1">Daftar Karyawan</h5>
-                        <p class="text-muted small mb-0">Kelola data karyawan dan sinkronisasi dengan mesin absensi</p>
+                <form action="{{ route('admin.audit-logs.index') }}" method="GET" class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">
+                            <i class="bi bi-cube text-muted me-1"></i>Module
+                        </label>
+                        <select name="module" class="form-select form-select-sm">
+                            <option value="all">Semua Module</option>
+                            @foreach($modules as $module)
+                            <option value="{{ $module }}" {{ request('module') == $module ? 'selected' : '' }}>
+                                {{ ucfirst($module) }}
+                            </option>
+                            @endforeach
+                        </select>
                     </div>
-
-                    <div class="d-flex gap-2">
-                        <form action="{{ route('karyawan.sync-mesin') }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menarik semua data user aktif dari mesin fisik ke database lokal web?');" class="m-0">
-                            @csrf
-                            <button type="submit" class="btn btn-outline-success">
-                                <i class="bi bi-arrow-clockwise me-1"></i> Sync dari Mesin
-                            </button>
-                        </form>
-
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalTambahKaryawan">
-                            <i class="bi bi-plus-lg me-1"></i> Tambah Karyawan
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">
+                            <i class="bi bi-play-circle text-muted me-1"></i>Action
+                        </label>
+                        <select name="action" class="form-select form-select-sm">
+                            <option value="all">Semua Action</option>
+                            @foreach($actions as $action)
+                            <option value="{{ $action }}" {{ request('action') == $action ? 'selected' : '' }}>
+                                {{ ucfirst($action) }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">
+                            <i class="bi bi-person text-muted me-1"></i>User
+                        </label>
+                        <select name="user_id" class="form-select form-select-sm">
+                            <option value="all">Semua User</option>
+                            @foreach($users as $user)
+                            <option value="{{ $user->id }}" {{ request('user_id') == $user->id ? 'selected' : '' }}>
+                                {{ $user->name }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">
+                            <i class="bi bi-calendar text-muted me-1"></i>Dari Tanggal
+                        </label>
+                        <input type="date" name="start_date" class="form-control form-control-sm" value="{{ request('start_date') }}">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-semibold small">
+                            <i class="bi bi-calendar-check text-muted me-1"></i>Sampai Tanggal
+                        </label>
+                        <input type="date" name="end_date" class="form-control form-control-sm" value="{{ request('end_date') }}">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-search me-1"></i>Filter
                         </button>
                     </div>
-                </div>
+                </form>
+            </div>
 
+            <!-- Export & Stats -->
+            <div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+                <div class="d-flex align-items-center gap-3">
+                    <a href="{{ route('admin.audit-logs.export', request()->all()) }}" class="btn btn-outline-success">
+                        <i class="bi bi-download me-1"></i>Export Excel
+                    </a>
+                    <span class="badge bg-light text-dark">
+                        <i class="bi bi-file-earspdf me-1"></i>{{ $logs->total() }} log ditemukan
+                    </span>
+                </div>
+            </div>
+
+            <!-- Audit Logs Table -->
+            <div class="card-custom p-4 bg-white fade-in">
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead>
                             <tr class="border-bottom">
-                                <th class="fw-bold text-muted small">ID / PIN</th>
-                                <th class="fw-bold text-muted small">NAMA</th>
-                                <th class="fw-bold text-muted small">DEPARTEMEN</th>
-                                <th class="fw-bold text-muted small">JABATAN</th>
-                                <th class="fw-bold text-muted small">STATUS</th>
-                                <th class="fw-bold text-muted small text-center">AKSI</th>
+                                <th class="fw-bold text-muted small">
+                                    <i class="bi bi-clock me-1"></i>Waktu
+                                </th>
+                                <th class="fw-bold text-muted small">
+                                    <i class="bi bi-person me-1"></i>User
+                                </th>
+                                <th class="fw-bold text-muted small">
+                                    <i class="bi bi-cube me-1"></i>Module
+                                </th>
+                                <th class="fw-bold text-muted small">
+                                    <i class="bi bi-play-circle me-1"></i>Action
+                                </th>
+                                <th class="fw-bold text-muted small">
+                                    <i class="bi bi-card-text me-1"></i>Deskripsi
+                                </th>
+                                <th class="fw-bold text-muted small">
+                                    <i class="bi bi-globe me-1"></i>IP Address
+                                </th>
+                                <th class="fw-bold text-muted small text-center">
+                                    <i class="bi bi-check-circle me-1"></i>Status
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($karyawans as $k)
+                            @forelse($logs as $log)
                             <tr class="border-bottom">
-                                <td>
-                                    <span class="badge bg-light text-dark px-3 py-2" style="font-family: 'Courier New', monospace;">
-                                        {{ $k->id_karyawan }}
-                                    </span>
+                                <td class="small text-muted">
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    {{ $log->created_at->format('d/m/Y H:i:s') }}
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center">
-                                        <div class="avatar-circle text-success me-2" style="width: 35px; height: 35px; font-size: 14px;">
-                                            {{ strtoupper(substr($k->nama, 0, 1)) }}
+                                        <div class="avatar-circle text-success me-2" style="width: 28px; height: 28px; font-size: 11px;">
+                                            {{ strtoupper(substr($log->user->name ?? 'Sys', 0, 1)) }}
                                         </div>
-                                        <span class="fw-bold">{{ $k->nama }}</span>
+                                        <span class="fw-semibold small">
+                                            {{ $log->user ? $log->user->name : 'System' }}
+                                        </span>
                                     </div>
                                 </td>
-                                <td class="text-muted">{{ $k->departemen ?? '-' }}</td>
-                                <td class="text-muted">{{ $k->jabatan ?? '-' }}</td>
                                 <td>
-                                    <span class="badge bg-success-subtle text-success">
-                                        <i class="bi bi-circle-fill me-1" style="font-size: 6px;"></i>{{ $k->status }}
+                                    <span class="badge bg-primary-subtle text-primary module-badge">
+                                        {{ strtoupper($log->module) }}
                                     </span>
                                 </td>
+                                <td>
+                                    <span class="badge bg-info-subtle text-info module-badge">
+                                        {{ strtoupper($log->action) }}
+                                    </span>
+                                </td>
+                                <td class="small text-muted description-text" title="{{ $log->description }}">
+                                    {{ $log->description }}
+                                </td>
+                                <td class="small text-muted">
+                                    <code>{{ $log->ip_address }}</code>
+                                </td>
                                 <td class="text-center">
-                                    <form action="{{ route('karyawan.destroy', $k->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus karyawan ini dari sistem dan mesin fisik?');" class="d-inline">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-trash3"></i>
-                                        </button>
-                                    </form>
+                                    @if($log->status === 'success')
+                                    <span class="badge bg-success-subtle text-success">
+                                        <i class="bi bi-check-lg me-1"></i>Success
+                                    </span>
+                                    @else
+                                    <span class="badge bg-danger-subtle text-danger">
+                                        <i class="bi bi-x-lg me-1"></i>Failed
+                                    </span>
+                                    @endif
                                 </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="6" class="text-center py-5">
-                                    <i class="bi bi-people fs-1 d-block mb-3 text-secondary opacity-50"></i>
-                                    <p class="text-muted mb-0">Belum ada data karyawan.</p>
-                                    <small class="text-muted">Klik tombol <strong>Sync dari Mesin</strong> atau <strong>Tambah Karyawan</strong></small>
+                                <td colspan="7" class="text-center py-5">
+                                    <i class="bi bi-inbox fs-1 d-block mb-3 text-secondary opacity-50"></i>
+                                    <p class="text-muted mb-1">Tidak ada log yang ditemukan</p>
+                                    <small class="text-muted">Coba ubah filter atau reset pencarian</small>
                                 </td>
                             </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
+                
+                @if($logs->hasPages())
+                <div class="p-3 border-top mt-3">
+                    {{ $logs->links() }}
+                </div>
+                @endif
             </div>
-        </div>
-    </div>
-</div>
-
-<div class="modal fade" id="modalTambahKaryawan" tabindex="-1" aria-labelledby="modalTambahKaryawanLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <div>
-                    <h5 class="modal-title fw-bold mb-1" id="modalTambahKaryawanLabel">
-                        <i class="bi bi-person-plus text-success me-2"></i>Tambah Karyawan Baru
-                    </h5>
-                    <small class="text-muted">Data akan tersimpan di web dan mesin absensi</small>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ route('karyawan.store') }}" method="POST">
-                @csrf
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            <i class="bi bi-hash text-muted me-1"></i>ID Karyawan / PIN Mesin
-                        </label>
-                        <input type="text" name="id_karyawan" class="form-control" placeholder="Contoh: 6" required>
-                        <div class="form-text">
-                            <i class="bi bi-info-circle me-1"></i>Pastikan ID berupa angka unik dan cocok dengan registrasi sidik jari di mesin.
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            <i class="bi bi-person text-muted me-1"></i>Nama Lengkap
-                        </label>
-                        <input type="text" name="nama" class="form-control" placeholder="Nama Karyawan" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            <i class="bi bi-building text-muted me-1"></i>Departemen
-                        </label>
-                        <input type="text" name="departemen" class="form-control" placeholder="Contoh: IT, HRD, GA">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            <i class="bi bi-briefcase text-muted me-1"></i>Jabatan
-                        </label>
-                        <input type="text" name="jabatan" class="form-control" placeholder="Contoh: Software Engineer">
-                    </div>
-                </div>
-                <div class="modal-footer border-top">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-                        <i class="bi bi-x-lg me-1"></i>Batal
-                    </button>
-                    <button type="submit" class="btn btn-success">
-                        <i class="bi bi-check-lg me-1"></i>Simpan ke Web & Mesin
-                    </button>
-                </div>
-            </form>
         </div>
     </div>
 </div>

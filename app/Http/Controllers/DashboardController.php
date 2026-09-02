@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Karyawan;
-use App\Models\Attendance; // Tetap menggunakan model Attendance bawaan proyekmu
+use App\Models\Attendance;
+use App\Models\MachineStatus;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -37,7 +39,120 @@ class DashboardController extends Controller
                             ->take(5)
                             ->get();
 
+        // 3. Data untuk Grafik Tren Kehadiran Mingguan (7 hari terakhir)
+        $trendMingguan = $this->getTrendMingguan();
+
+        // 4. Data untuk Grafik Tren Kehadiran Bulanan (30 hari terakhir)
+        $trendBulanan = $this->getTrendBulanan();
+
+        // 5. Status Mesin Absensi
+        $machineStatus = MachineStatus::first();
+
         // Mengirimkan semua data ke view 'dashboard'
-        return view('dashboard', compact('totalKaryawan', 'hadirHariIni', 'terlambat', 'tidakHadir', 'absensiTerbaru'));
+        return view('dashboard', compact(
+            'totalKaryawan', 
+            'hadirHariIni', 
+            'terlambat', 
+            'tidakHadir', 
+            'absensiTerbaru',
+            'trendMingguan',
+            'trendBulanan',
+            'machineStatus'
+        ));
+    }
+
+    /**
+     * Mengambil data tren kehadiran 7 hari terakhir
+     */
+    private function getTrendMingguan()
+    {
+        $labels = [];
+        $hadir = [];
+        $terlambat = [];
+        $alpha = [];
+
+        for ($i = 6; $i >= 0; $i--) {
+            $tanggal = Carbon::today()->subDays($i);
+            $labels[] = $tanggal->format('D'); // Mon, Tue, Wed, etc
+            
+            $totalKaryawan = Karyawan::where('status', 'Aktif')->count();
+            
+            $hadirCount = Attendance::where('tanggal', $tanggal->toDateString())
+                ->where('status', 'Hadir')
+                ->count();
+            
+            $terlambatCount = Attendance::where('tanggal', $tanggal->toDateString())
+                ->where('status', 'Terlambat')
+                ->count();
+            
+            $alphaCount = $totalKaryawan - ($hadirCount + $terlambatCount);
+            $alphaCount = $alphaCount < 0 ? 0 : $alphaCount;
+            
+            $hadir[] = $hadirCount;
+            $terlambat[] = $terlambatCount;
+            $alpha[] = $alphaCount;
+        }
+
+        return [
+            'labels' => $labels,
+            'hadir' => $hadir,
+            'terlambat' => $terlambat,
+            'alpha' => $alpha,
+        ];
+    }
+
+    /**
+     * Mengambil data tren kehadiran 30 hari terakhir
+     */
+    private function getTrendBulanan()
+    {
+        $labels = [];
+        $hadir = [];
+        $terlambat = [];
+
+        for ($i = 29; $i >= 0; $i--) {
+            $tanggal = Carbon::today()->subDays($i);
+            $labels[] = $tanggal->format('d/m'); // 01/09, 02/09, etc
+            
+            $hadirCount = Attendance::where('tanggal', $tanggal->toDateString())
+                ->where('status', 'Hadir')
+                ->count();
+            
+            $terlambatCount = Attendance::where('tanggal', $tanggal->toDateString())
+                ->where('status', 'Terlambat')
+                ->count();
+            
+            $hadir[] = $hadirCount;
+            $terlambat[] = $terlambatCount;
+        }
+
+        return [
+            'labels' => $labels,
+            'hadir' => $hadir,
+            'terlambat' => $terlambat,
+        ];
+    }
+
+    /**
+     * API endpoint untuk mendapatkan stats dashboard
+     * Digunakan untuk real-time updates
+     */
+    public function getStats()
+    {
+        $hariIni = Carbon::today()->toDateString();
+        $totalKaryawan = Karyawan::where('status', 'Aktif')->count();
+        $terlambat = Attendance::where('tanggal', $hariIni)->where('status', 'Terlambat')->count();
+        $hadirHariIni = Attendance::where('tanggal', $hariIni)
+                            ->whereIn('status', ['Hadir', 'Terlambat'])
+                            ->count();
+        $tidakHadir = $totalKaryawan - $hadirHariIni;
+        $tidakHadir = $tidakHadir < 0 ? 0 : $tidakHadir;
+
+        return response()->json([
+            'totalKaryawan' => $totalKaryawan,
+            'hadirHariIni' => $hadirHariIni,
+            'terlambat' => $terlambat,
+            'tidakHadir' => $tidakHadir,
+        ]);
     }
 }

@@ -5,27 +5,31 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Attendance extends Model
+class Lembur extends Model
 {
     use HasFactory;
 
     protected $fillable = [
+        'attendance_id',
         'karyawan_id',
         'tanggal',
-        'jam_masuk',
-        'jam_pulang',
-        'status',
-        'verifikasi'
+        'jam_lembur_mulai',
+        'jam_lembur_selesai',
+        'lama_lembur',
     ];
 
-    // Relasi: Satu baris absensi dimiliki oleh satu karyawan
+    protected $casts = [
+        'tanggal' => 'date',
+        'lama_lembur' => 'integer',
+    ];
+
     public function karyawan()
     {
         return $this->belongsTo(Karyawan::class, 'karyawan_id');
     }
 
-    public function lembur()
+    public function attendance()
     {
-        return $this->hasOne(Lembur::class, 'attendance_id');
+        return $this->belongsTo(Attendance::class, 'attendance_id');
     }
 }

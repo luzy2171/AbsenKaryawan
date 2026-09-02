@@ -22,9 +22,13 @@ class AbsensiService
         $data = " " . $data;
         $ini = strpos($data, $p1);
         if ($ini == 0) return "";
-        $ini += strlen($p1);
-        $len = strpos($data, $p2, $ini) - $ini;
-        return substr($data, $ini, $len);
+
+        $ini += strlen($p1);  // Pindah di pasti tag pembuka $p1
+        $akhir = strpos($data, $p2, $ini);  // Temu tag penutup $p2 dari posisi $ini
+        if ($akhir === false) return "";
+
+        $len = $akhir - $ini;  // Hitung panjang content di antara $p1 dan $p2
+        return substr($data, $ini, $len);  // Ekstrakan content-nya
     }
 
     /**
@@ -72,7 +76,7 @@ class AbsensiService
             $pin  = $this->parseData($data, "<PIN>", "</PIN>");
             $name = $this->parseData($data, "<Name>", "</Name>");
 
-            $users[] = ['pin' => $pin, 'name' => $name];
+            $users[] = (object) ['user_id' => $pin, 'pin' => $pin, 'name' => $name];
         }
         return $users;
     }
@@ -86,7 +90,7 @@ class AbsensiService
         $users = $this->getAllUsers();
         $userList = [];
         foreach ($users as $u) {
-            $userList[$u['pin']] = $u['name'];
+            $userList[$u->user_id] = $u->name;
         }
 
         $soap = '<?xml version="1.0"?><GetAttLog><ArgComKey>'.$this->key.'</ArgComKey><Arg><PIN>All</PIN></Arg></GetAttLog>';
@@ -103,13 +107,21 @@ class AbsensiService
             if (trim($data) == "") continue;
 
             $pin = $this->parseData($data, "<PIN>", "</PIN>");
+            $dateTime = $this->parseData($data, "<DateTime>", "</DateTime>");
+            $datePart = strlen($dateTime) >= 10 ? substr($dateTime, 0, 10) : ($dateTime ?: '-');
+            $timePart = strlen($dateTime) >= 12 ? substr($dateTime, 11) : '-';
 
-            $logs[] = [
-                'pin'       => $pin,
-                'nama'      => $userList[$pin] ?? '-',
-                'datetime'  => $this->parseData($data, "<DateTime>", "</DateTime>"),
-                'verified'  => $this->parseData($data, "<Verified>", "</Verified>"),
-                'status'    => $this->parseData($data, "<Status>", "</Status>"),
+            $logs[] = (object) [
+                'pin'     => $pin,
+                'name'    => $userList[$pin] ?? '-',
+                'nama'    => $userList[$pin] ?? '-',
+                'tanggal' => $datePart,
+                'waktu'   => $timePart,
+                'date'    => $datePart,
+                'time'    => $timePart,
+                'verify'  => $this->parseData($data, "<Verified>", "</Verified>"),
+                'verified'=> $this->parseData($data, "<Verified>", "</Verified>"),
+                'status'  => $this->parseData($data, "<Status>", "</Status>"),
             ];
         }
         return $logs;
@@ -205,12 +217,13 @@ class AbsensiService
             $data = $this->parseData($row, "<Row>", "</Row>");
             if (trim($data) == "") continue;
 
-            $templates[] = [
-                'pin'       => $this->parseData($data, "<PIN>", "</PIN>"),
-                'finger_id' => $this->parseData($data, "<FingerID>", "</FingerID>"),
-                'size'      => $this->parseData($data, "<Size>", "</Size>"),
-                'valid'     => $this->parseData($data, "<Valid>", "</Valid>"),
-                'template'  => $this->parseData($data, "<Template>", "</Template>"),
+            $templates[] = (object) [
+                'user_id'  => $this->parseData($data, "<PIN>", "</PIN>"),
+                'pin'      => $this->parseData($data, "<PIN>", "</PIN>"),
+                'finger_id'=> $this->parseData($data, "<FingerID>", "</FingerID>"),
+                'size'     => $this->parseData($data, "<Size>", "</Size>"),
+                'valid'    => $this->parseData($data, "<Valid>", "</Valid>"),
+                'template' => $this->parseData($data, "<Template>", "</Template>"),
             ];
         }
         return $templates;
@@ -305,7 +318,7 @@ class AbsensiService
         $response = $this->executeSocket($soap);
 
         // Refresh DB internal mesin agar perubahan langsung aktif
-        $refreshSoap = 'xml version="1.0"?><RefreshDB><ArgComKey>'.$this->key.'</ArgComKey></RefreshDB>';
+        $refreshSoap = '<?xml version="1.0"?><RefreshDB><ArgComKey>'.$this->key.'</ArgComKey></RefreshDB>';
         $this->executeSocket($refreshSoap);
 
         if (!$response) return "Koneksi Gagal";

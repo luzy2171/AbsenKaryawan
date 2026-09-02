@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Attendance; // <-- Tambahkan baris import ini jika belum ada
 
 class Karyawan extends Model
 {
@@ -17,5 +16,10 @@ class Karyawan extends Model
     public function attendances()
     {
         return $this->hasMany(Attendance::class, 'karyawan_id');
+    }
+
+    public function lembur()
+    {
+        return $this->hasMany(Lembur::class, 'karyawan_id');
     }
 }

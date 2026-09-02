@@ -50,6 +50,7 @@
                     <th width="15%">Tanggal</th>
                     <th width="15%">Jam Masuk</th>
                     <th width="15%">Jam Pulang</th>
+                    <th width="13%">Lembur</th>
                     <th width="13%">Status</th>
                 </tr>
             </thead>
@@ -63,6 +64,15 @@
                     <td class="text-center">{{ $item['jam_masuk'] ? $item['jam_masuk'] . ' WIB' : '-' }}</td>
                     <td class="text-center">{{ $item['jam_pulang'] ? $item['jam_pulang'] . ' WIB' : '-' }}</td>
                     <td class="text-center">
+                        @if($item['lama_lembur'] > 0)
+                            <span class="badge bg-info-subtle text-info">
+                                <i class="bi bi-clock me-1"></i>{{ $item['lama_lembur'] }} menit
+                            </span>
+                        @else
+                            <span class="badge bg-light text-muted">-</span>
+                        @endif
+                    </td>
+                    <td class="text-center">
                         @if($item['status'] == 'Hadir')
                             <span class="badge-hadir">Hadir</span>
                         @else
@@ -72,7 +82,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="7" class="text-center py-4 text-muted">Tidak ditemukan rekaman log kehadiran pada rentang tanggal tersebut.</td>
+                    <td colspan="8" class="text-center py-4 text-muted">Tidak ditemukan rekaman log kehadiran pada rentang tanggal tersebut.</td>
                 </tr>
                 @endforelse
             </tbody>

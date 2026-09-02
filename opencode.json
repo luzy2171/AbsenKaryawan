@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "juan-router": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Juan Router",
+      "options": {
+        "baseURL": "https://router.juan.web.id/v1",
+        "apiKey": "sk-EayV4hoCPZ0SKu8wjmd7vXhQZSe0q18JNnvoqCjqc27UBMri"
+      },
+      "models": {
+        "claude-sonnet-4-5": {}
+      }
+    }
+  },
+  "model": "juan-router/claude-sonnet-4-5"
+}

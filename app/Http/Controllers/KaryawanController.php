@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Karyawan;
 use App\Services\AbsensiService;
+use App\Helpers\AuditLogger;
 
 class KaryawanController extends Controller
 {
@@ -31,7 +32,7 @@ class KaryawanController extends Controller
         ]);
 
         // 2. Simpan ke database internal website
-        Karyawan::create([
+        $karyawan = Karyawan::create([
             'id_karyawan' => $request->id_karyawan,
             'nama'        => $request->nama,
             'departemen'  => $request->departemen,
@@ -42,6 +43,9 @@ class KaryawanController extends Controller
         // 3. Otomatis kirim data nama dan PIN ke mesin absensi fisik via SOAP Service
         $absensiService->uploadNama($request->id_karyawan, $request->nama);
 
+        // Log audit
+        AuditLogger::karyawanCreated($karyawan);
+
         return redirect()->route('karyawan.index')->with('status', 'Karyawan berhasil ditambahkan ke Web dan Mesin Absensi.');
     }
 
@@ -50,24 +54,39 @@ class KaryawanController extends Controller
      */
     public function syncDariMesin(AbsensiService $absensiService)
     {
+        // Track waktu mulai untuk response time
+        $startTime = microtime(true);
+        
         // 1. Ambil seluruh data user yang ada di memori mesin
         $usersDariMesin = $absensiService->getAllUsers();
 
+        // Update status mesin berdasarkan hasil koneksi
+        $machineStatus = \App\Models\MachineStatus::first();
+        
         if (empty($usersDariMesin)) {
+            // Update status mesin menjadi offline
+            if ($machineStatus) {
+                $machineStatus->updateStatus(false);
+            }
             return back()->with('error', 'Gagal mengambil data dari mesin. Pastikan mesin dalam kondisi terhubung (Online).');
+        }
+
+        // Hitung response time dan update status mesin menjadi online
+        $responseTime = round((microtime(true) - $startTime) * 1000);
+        if ($machineStatus) {
+            $machineStatus->updateStatus(true, $responseTime);
         }
 
         $karyawanBaru = 0;
 
         // 2. Lakukan pengecekan dan penyimpanan data ke DB Web secara massal
         foreach ($usersDariMesin as $user) {
-            // Cek apakah ID Karyawan (PIN) sudah terdaftar di website
-            $exists = Karyawan::where('id_karyawan', $user['pin'])->exists();
+            $exists = Karyawan::where('id_karyawan', $user->pin)->exists();
 
             if (!$exists) {
                 Karyawan::create([
-                    'id_karyawan' => $user['pin'],
-                    'nama'        => $user['name'],
+                    'id_karyawan' => $user->pin,
+                    'nama'        => $user->name,
                     'departemen'  => '-',
                     'jabatan'     => 'Staf',
                     'status'      => 'Aktif'
@@ -75,6 +94,9 @@ class KaryawanController extends Controller
                 $karyawanBaru++;
             }
         }
+
+        // Log audit
+        AuditLogger::karyawanSynced($karyawanBaru);
 
         return redirect()->route('karyawan.index')->with('status', "Sinkronisasi berhasil! Memproses $karyawanBaru data karyawan baru dari mesin absensi.");
     }
@@ -88,6 +110,9 @@ class KaryawanController extends Controller
 
         // 1. Hapus user dari mesin absensi fisik berdasarkan PIN/ID-nya
         $absensiService->hapusUser($karyawan->id_karyawan);
+
+        // Log audit before delete
+        AuditLogger::karyawanDeleted($karyawan);
 
         // 2. Hapus dari database website
         $karyawan->delete();

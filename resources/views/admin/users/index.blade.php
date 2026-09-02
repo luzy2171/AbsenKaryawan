@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Karyawan - Absensi-BBM</title>
+    <title>Manajemen User - Absensi-BBM</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -12,11 +12,9 @@
     <style>
         :root {
             --primary-color: #2e7d32;
-            --primary-light: #4caf50;
-            --primary-dark: #1b5e20;
             --success-color: #2e7d32;
-            --warning-color: #f57c00;
             --danger-color: #d32f2f;
+            --info-color: #0288d1;
             --gray-50: #fafafa;
             --gray-100: #f5f5f5;
             --gray-200: #eeeeee;
@@ -127,18 +125,14 @@
             padding: 20px 24px;
         }
         
-        .modal-body {
-            padding: 24px;
-        }
-        
-        .form-control {
+        .form-control, .form-select {
             border-radius: 10px;
             border: 1px solid var(--gray-300);
             padding: 10px 16px;
             transition: all 0.3s ease;
         }
         
-        .form-control:focus {
+        .form-control:focus, .form-select:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
         }
@@ -230,16 +224,16 @@
         <div class="col-md-10 p-4">
             <div class="d-flex justify-content-between align-items-center mb-4 fade-in">
                 <div>
-                    <h4 class="fw-bold m-0 mb-1"><i class="bi bi-people text-success me-2"></i>Data Karyawan</h4>
+                    <h4 class="fw-bold m-0 mb-1"><i class="bi bi-people-fill text-success me-2"></i>Manajemen User</h4>
                     <div class="d-flex align-items-center">
                         <i class="bi bi-person-badge text-muted me-2"></i>
-                        <small class="text-muted">{{ count($karyawans) }} total karyawan terdaftar</small>
+                        <small class="text-muted">{{ count($users) }} akun pengguna terdaftar</small>
                     </div>
                 </div>
                 <div class="d-flex align-items-center">
                     <div class="text-end me-3">
                         <p class="mb-0 fw-semibold small">{{ auth()->user()->name }}</p>
-                        <small class="text-muted">{{ auth()->user()->isSuperadmin() ? 'Superadmin' : 'Admin' }}</small>
+                        <small class="text-muted">Superadmin</small>
                     </div>
                     <div class="avatar-circle text-success">
                         {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
@@ -260,78 +254,91 @@
                 </div>
             @endif
 
-            <div class="card card-custom p-4 bg-white fade-in">
+            <div class="card-custom p-4 bg-white fade-in">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <div>
-                        <h5 class="fw-bold mb-1">Daftar Karyawan</h5>
-                        <p class="text-muted small mb-0">Kelola data karyawan dan sinkronisasi dengan mesin absensi</p>
+                        <h5 class="fw-bold mb-1">Daftar User</h5>
+                        <p class="text-muted small mb-0">Kelola akun pengguna dan hak akses sistem</p>
                     </div>
-
-                    <div class="d-flex gap-2">
-                        <form action="{{ route('karyawan.sync-mesin') }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menarik semua data user aktif dari mesin fisik ke database lokal web?');" class="m-0">
-                            @csrf
-                            <button type="submit" class="btn btn-outline-success">
-                                <i class="bi bi-arrow-clockwise me-1"></i> Sync dari Mesin
-                            </button>
-                        </form>
-
-                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalTambahKaryawan">
-                            <i class="bi bi-plus-lg me-1"></i> Tambah Karyawan
-                        </button>
-                    </div>
+                    <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalTambahUser">
+                        <i class="bi bi-person-plus me-1"></i> Tambah User
+                    </button>
                 </div>
 
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead>
                             <tr class="border-bottom">
-                                <th class="fw-bold text-muted small">ID / PIN</th>
                                 <th class="fw-bold text-muted small">NAMA</th>
-                                <th class="fw-bold text-muted small">DEPARTEMEN</th>
-                                <th class="fw-bold text-muted small">JABATAN</th>
-                                <th class="fw-bold text-muted small">STATUS</th>
+                                <th class="fw-bold text-muted small">USERNAME</th>
+                                <th class="fw-bold text-muted small">EMAIL</th>
+                                <th class="fw-bold text-muted small">ROLE</th>
+                                <th class="fw-bold text-muted small">DIBUAT</th>
                                 <th class="fw-bold text-muted small text-center">AKSI</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($karyawans as $k)
+                            @forelse($users as $u)
                             <tr class="border-bottom">
-                                <td>
-                                    <span class="badge bg-light text-dark px-3 py-2" style="font-family: 'Courier New', monospace;">
-                                        {{ $k->id_karyawan }}
-                                    </span>
-                                </td>
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="avatar-circle text-success me-2" style="width: 35px; height: 35px; font-size: 14px;">
-                                            {{ strtoupper(substr($k->nama, 0, 1)) }}
+                                            {{ strtoupper(substr($u->name, 0, 1)) }}
                                         </div>
-                                        <span class="fw-bold">{{ $k->nama }}</span>
+                                        <div>
+                                            <span class="fw-bold">{{ $u->name }}</span>
+                                            @if($u->id === auth()->id())
+                                                <span class="badge bg-info-subtle text-info ms-1">
+                                                    <i class="bi bi-person-check-fill me-1" style="font-size: 9px;"></i>Anda
+                                                </span>
+                                            @endif
+                                        </div>
                                     </div>
                                 </td>
-                                <td class="text-muted">{{ $k->departemen ?? '-' }}</td>
-                                <td class="text-muted">{{ $k->jabatan ?? '-' }}</td>
                                 <td>
-                                    <span class="badge bg-success-subtle text-success">
-                                        <i class="bi bi-circle-fill me-1" style="font-size: 6px;"></i>{{ $k->status }}
+                                    <span class="badge bg-light text-dark px-3 py-2" style="font-family: 'Courier New', monospace;">
+                                        {{ $u->username }}
                                     </span>
                                 </td>
+                                <td class="text-muted">{{ $u->email }}</td>
+                                <td>
+                                    <span class="badge {{ $u->role === 'superadmin' ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success' }}">
+                                        <i class="bi {{ $u->role === 'superadmin' ? 'bi-shield-fill-check' : 'bi-person-check' }} me-1"></i>
+                                        {{ $u->role === 'superadmin' ? 'Superadmin' : 'Admin' }}
+                                    </span>
+                                </td>
+                                <td class="text-muted small">
+                                    <i class="bi bi-calendar3 me-1"></i>{{ \Carbon\Carbon::parse($u->created_at)->translatedFormat('d M Y') }}
+                                </td>
                                 <td class="text-center">
-                                    <form action="{{ route('karyawan.destroy', $k->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus karyawan ini dari sistem dan mesin fisik?');" class="d-inline">
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-success"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#modalEditUser"
+                                            data-id="{{ $u->id }}"
+                                            data-name="{{ $u->name }}"
+                                            data-username="{{ $u->username }}"
+                                            data-email="{{ $u->email }}"
+                                            data-role="{{ $u->role }}"
+                                            data-self="{{ $u->id === auth()->id() ? 1 : 0 }}">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    @if($u->id !== auth()->id())
+                                    <form action="{{ route('admin.users.destroy', $u->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin ingin menghapus user ini?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-sm btn-outline-danger">
                                             <i class="bi bi-trash3"></i>
                                         </button>
                                     </form>
+                                    @endif
                                 </td>
                             </tr>
                             @empty
                             <tr>
                                 <td colspan="6" class="text-center py-5">
                                     <i class="bi bi-people fs-1 d-block mb-3 text-secondary opacity-50"></i>
-                                    <p class="text-muted mb-0">Belum ada data karyawan.</p>
-                                    <small class="text-muted">Klik tombol <strong>Sync dari Mesin</strong> atau <strong>Tambah Karyawan</strong></small>
+                                    <p class="text-muted mb-0">Belum ada user terdaftar</p>
                                 </td>
                             </tr>
                             @endforelse
@@ -343,47 +350,54 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalTambahKaryawan" tabindex="-1" aria-labelledby="modalTambahKaryawanLabel" aria-hidden="true">
+<!-- Modal Tambah User -->
+<div class="modal fade" id="modalTambahUser" tabindex="-1" aria-labelledby="modalTambahUserLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
                 <div>
-                    <h5 class="modal-title fw-bold mb-1" id="modalTambahKaryawanLabel">
-                        <i class="bi bi-person-plus text-success me-2"></i>Tambah Karyawan Baru
+                    <h5 class="modal-title fw-bold mb-1" id="modalTambahUserLabel">
+                        <i class="bi bi-person-plus text-success me-2"></i>Tambah User Baru
                     </h5>
-                    <small class="text-muted">Data akan tersimpan di web dan mesin absensi</small>
+                    <small class="text-muted">Buat akun pengguna baru untuk sistem</small>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form action="{{ route('karyawan.store') }}" method="POST">
+            <form action="{{ route('admin.users.store') }}" method="POST">
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">
-                            <i class="bi bi-hash text-muted me-1"></i>ID Karyawan / PIN Mesin
-                        </label>
-                        <input type="text" name="id_karyawan" class="form-control" placeholder="Contoh: 6" required>
-                        <div class="form-text">
-                            <i class="bi bi-info-circle me-1"></i>Pastikan ID berupa angka unik dan cocok dengan registrasi sidik jari di mesin.
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">
                             <i class="bi bi-person text-muted me-1"></i>Nama Lengkap
                         </label>
-                        <input type="text" name="nama" class="form-control" placeholder="Nama Karyawan" required>
+                        <input type="text" name="name" class="form-control" placeholder="Nama Pengguna" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">
-                            <i class="bi bi-building text-muted me-1"></i>Departemen
+                            <i class="bi bi-at text-muted me-1"></i>Username
                         </label>
-                        <input type="text" name="departemen" class="form-control" placeholder="Contoh: IT, HRD, GA">
+                        <input type="text" name="username" class="form-control" placeholder="Username untuk login" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">
-                            <i class="bi bi-briefcase text-muted me-1"></i>Jabatan
+                            <i class="bi bi-envelope text-muted me-1"></i>Email
                         </label>
-                        <input type="text" name="jabatan" class="form-control" placeholder="Contoh: Software Engineer">
+                        <input type="email" name="email" class="form-control" placeholder="email@contoh.com" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-key text-muted me-1"></i>Password
+                        </label>
+                        <input type="password" name="password" class="form-control" placeholder="Minimal 6 karakter" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-shield-check text-muted me-1"></i>Role
+                        </label>
+                        <select name="role" class="form-select">
+                            <option value="admin" selected>Admin</option>
+                            <option value="superadmin">Superadmin</option>
+                        </select>
                     </div>
                 </div>
                 <div class="modal-footer border-top">
@@ -391,7 +405,74 @@
                         <i class="bi bi-x-lg me-1"></i>Batal
                     </button>
                     <button type="submit" class="btn btn-success">
-                        <i class="bi bi-check-lg me-1"></i>Simpan ke Web & Mesin
+                        <i class="bi bi-check-lg me-1"></i>Simpan User
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Edit User -->
+<div class="modal fade" id="modalEditUser" tabindex="-1" aria-labelledby="modalEditUserLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title fw-bold mb-1" id="modalEditUserLabel">
+                        <i class="bi bi-pencil-square text-primary me-2"></i>Edit User
+                    </h5>
+                    <small class="text-muted">Perbarui informasi pengguna</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEditUser" action="" method="POST">
+                @csrf
+                <input type="hidden" name="user_id" id="editUserId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-person text-muted me-1"></i>Nama Lengkap
+                        </label>
+                        <input type="text" name="name" id="editName" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-at text-muted me-1"></i>Username
+                        </label>
+                        <input type="text" name="username" id="editUsername" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-envelope text-muted me-1"></i>Email
+                        </label>
+                        <input type="email" name="email" id="editEmail" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-key text-muted me-1"></i>Password
+                        </label>
+                        <input type="password" name="password" class="form-control" placeholder="Kosongkan jika tidak ingin mengubah">
+                        <small class="text-muted">
+                            <i class="bi bi-info-circle me-1"></i>Kosongkan jika tidak ingin mengubah password
+                        </small>
+                    </div>
+                    <div class="mb-3" id="roleSelectContainer">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-shield-check text-muted me-1"></i>Role
+                        </label>
+                        <select name="role" id="editRole" class="form-select">
+                            <option value="admin">Admin</option>
+                            <option value="superadmin">Superadmin</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                        <i class="bi bi-x-lg me-1"></i>Batal
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-lg me-1"></i>Update User
                     </button>
                 </div>
             </form>
@@ -400,5 +481,36 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const modalEditUser = document.getElementById('modalEditUser');
+    modalEditUser.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const userId = button.getAttribute('data-id');
+        const name = button.getAttribute('data-name');
+        const username = button.getAttribute('data-username');
+        const email = button.getAttribute('data-email');
+        const role = button.getAttribute('data-role');
+        const isSelf = button.getAttribute('data-self') === '1';
+
+        document.getElementById('editUserId').value = userId;
+        document.getElementById('editName').value = name;
+        document.getElementById('editUsername').value = username;
+        document.getElementById('editEmail').value = email;
+        document.getElementById('editRole').value = role;
+
+        // Set form action
+        document.getElementById('formEditUser').action = "{{ url('/admin/users/update') }}/" + userId;
+
+        // Disable role select if editing own account
+        const roleSelect = document.getElementById('editRole');
+        const roleContainer = document.getElementById('roleSelectContainer');
+        if (isSelf) {
+            roleSelect.disabled = true;
+            roleContainer.innerHTML += '<small class="text-warning"><i class="bi bi-info-circle me-1"></i>Tidak dapat mengubah role akun sendiri</small>';
+        } else {
+            roleSelect.disabled = false;
+        }
+    });
+</script>
 </body>
 </html>

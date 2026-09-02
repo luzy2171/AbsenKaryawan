@@ -3,350 +3,362 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kontrol Perangkat - Absensi-BBM</title>
+    <title>Kontrol Mesin - Absensi-BBM</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <style>
-        body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
-        .sidebar { height: 100vh; background-color: #fff; border-right: 1px solid #dee2e6; }
-        .nav-link.menu { color: #333; border-radius: 8px; margin-bottom: 5px; }
-        .nav-link.menu.active { background-color: #e8f5e9; color: #2e7d32; font-weight: bold; }
-        .card-custom { border: none; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
-        .status-indicator { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
-        .extra-small { font-size: 0.75rem; }
+        :root {
+            --primary-color: #2e7d32;
+            --success-color: #2e7d32;
+            --warning-color: #f57c00;
+            --danger-color: #d32f2f;
+            --info-color: #0288d1;
+            --gray-50: #fafafa;
+            --gray-100: #f5f5f5;
+            --gray-200: #eeeeee;
+            --gray-300: #e0e0e0;
+            --gray-600: #757575;
+            --gray-800: #424242;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        body { background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%); font-family: 'Inter', sans-serif; min-height: 100vh; }
+        .sidebar { height: 100vh; background: linear-gradient(180deg, #ffffff 0%, #fafafa 100%); border-right: 1px solid var(--gray-200); box-shadow: var(--shadow-sm); position: sticky; top: 0; }
+        .nav-link { color: var(--gray-800); border-radius: 10px; margin-bottom: 6px; padding: 12px 16px; transition: all 0.3s ease; font-weight: 500; }
+        .nav-link:hover { background-color: var(--gray-100); transform: translateX(4px); }
+        .nav-link.active { background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); color: var(--primary-color); font-weight: 600; box-shadow: var(--shadow-sm); }
+        .card-custom { border: none; border-radius: 16px; box-shadow: var(--shadow-md); transition: all 0.3s ease; background: white; }
+        .stat-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .table-hover tbody tr:hover { background-color: var(--gray-50); transition: background-color 0.2s ease; }
+        .btn { border-radius: 10px; padding: 8px 20px; font-weight: 600; transition: all 0.3s ease; }
+        .btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .badge { padding: 6px 12px; border-radius: 8px; font-weight: 600; font-size: 11px; letter-spacing: 0.5px; }
+        .fade-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .form-control, .form-select { border-radius: 10px; border: 1px solid var(--gray-300); padding: 10px 16px; transition: all 0.3s ease; }
+        .form-control:focus, .form-select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1); }
+        .avatar-circle { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); font-size: 18px; }
+        h3, h4, h5 { font-weight: 700; letter-spacing: -0.5px; }
+        .nav-pills .nav-link { border-radius: 10px; padding: 10px 20px; margin-right: 8px; font-weight: 600; }
+        .nav-pills .nav-link.active { background: linear-gradient(135deg, var(--success-color) 0%, var(--primary-color) 100%); }
+        .status-indicator { width: 10px; height: 10px; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        code.small { font-family: 'Courier New', monospace; font-size: 11px; }
     </style>
 </head>
 <body>
-
 <div class="container-fluid">
     <div class="row">
-        <!-- Sidebar Menu Navigasi Terpadu -->
         <div class="col-md-2 sidebar p-3 d-none d-md-block">
-            <div class="d-flex align-items-center mb-4 px-2">
-                <i class="bi bi-fingerprint text-success fs-3 me-2"></i>
-                <h5 class="fw-bold m-0 text-success">Absensi-BBM</h5>
+            <div class="d-flex align-items-center mb-4 px-2 py-3">
+                <div class="stat-icon bg-success text-white me-2"><i class="bi bi-fingerprint"></i></div>
+                <div><h5 class="fw-bold m-0 text-success" style="font-size: 18px;">Absensi-BBM</h5><small class="text-muted" style="font-size: 10px;">Attendance System</small></div>
             </div>
             <ul class="nav flex-column">
-                <li class="nav-item">
-                    <a class="nav-link menu {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ url('/dashboard') }}">
-                        <i class="bi bi-grid me-2"></i> Dashboard
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link menu {{ request()->is('karyawan*') ? 'active' : '' }}" href="{{ url('/karyawan') }}">
-                        <i class="bi bi-people me-2"></i> Karyawan
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link menu {{ request()->is('absensi*') ? 'active' : '' }}" href="{{ url('/absensi') }}">
-                        <i class="bi bi-calendar-check me-2"></i> Absensi
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link menu {{ request()->is('admin/settings*') ? 'active' : '' }}" href="{{ url('/admin/settings') }}">
-                        <i class="bi bi-clock-history me-2"></i> Set Jam Kerja
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link menu {{ request()->is('pengaturan*') ? 'active' : '' }}" href="{{ url('/pengaturan') }}">
-                        <i class="bi bi-gear me-2"></i> Kontrol Mesin
-                    </a>
+                <li class="nav-item"><a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ url('/dashboard') }}"><i class="bi bi-grid me-2"></i> Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link {{ request()->is('karyawan*') ? 'active' : '' }}" href="{{ url('/karyawan') }}"><i class="bi bi-people me-2"></i> Karyawan</a></li>
+                <li class="nav-item"><a class="nav-link {{ request()->is('absensi*') ? 'active' : '' }}" href="{{ url('/absensi') }}"><i class="bi bi-calendar-check me-2"></i> Absensi</a></li>
+                @if(auth()->user()->isSuperadmin())
+                <li class="nav-item mt-3"><small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small></li>
+                <li class="nav-item"><a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}" href="{{ url('/admin/settings') }}"><i class="bi bi-clock-history me-2"></i> Set Jam Kerja</a></li>
+                <li class="nav-item"><a class="nav-link {{ request()->is('pengaturan*') ? 'active' : '' }}" href="{{ url('/pengaturan') }}"><i class="bi bi-gear me-2"></i> Kontrol Mesin</a></li>
+                <li class="nav-item"><a class="nav-link {{ request()->is('admin/users*') ? 'active' : '' }}" href="{{ url('/admin/users') }}"><i class="bi bi-person-gear me-2"></i> Manajemen User</a></li>
+                <li class="nav-item"><a class="nav-link {{ request()->is('admin/audit-logs*') ? 'active' : '' }}" href="{{ url('/admin/audit-logs') }}"><i class="bi bi-journal-text me-2"></i> Audit Logs</a></li>
+                @endif
+                <li class="nav-item mt-auto pt-3 border-top">
+                    <form action="{{ route('logout') }}" method="POST">@csrf<button type="submit" class="nav-link text-danger w-100 text-start border-0 bg-transparent"><i class="bi bi-box-arrow-left me-2"></i> Keluar</button></form>
                 </li>
             </ul>
         </div>
 
-        <!-- Konten Utama: Pusat Kontrol Perangkat -->
         <div class="col-md-10 p-4">
-
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-4 fade-in">
                 <div>
-                    <h4 class="fw-bold m-0">Pusat Kendali SDK Mesin</h4>
-                    <small class="text-muted">Interaksi perangkat keras dan pemeliharaan data bio-memori</small>
+                    <h4 class="fw-bold m-0 mb-1"><i class="bi bi-hdd-network text-success me-2"></i>Kontrol Mesin Absensi</h4>
+                    <div class="d-flex align-items-center"><i class="bi bi-cpu text-muted me-2"></i><small class="text-muted">Kendali SDK dan manajemen perangkat keras</small></div>
                 </div>
                 <div class="d-flex align-items-center">
-                    <span class="me-3 fw-semibold">Administrator</span>
-                    <i class="bi bi-person-circle fs-3 text-secondary"></i>
+                    <div class="text-end me-3"><p class="mb-0 fw-semibold small">{{ auth()->user()->name }}</p><small class="text-muted">Superadmin</small></div>
+                    <div class="avatar-circle text-success">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
                 </div>
             </div>
 
             @if(session('status'))
-                <div class="alert alert-success border-0 shadow-sm mb-3 alert-dismissible fade show" role="alert">
-                    <i class="bi bi-check-circle-fill me-2"></i> {{ session('status') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4 fade-in" role="alert">
+                    <i class="bi bi-check-circle-fill me-2"></i>{{ session('status') }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
             @if(session('error'))
-                <div class="alert alert-danger border-0 shadow-sm mb-3 alert-dismissible fade show" role="alert">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i> {{ session('error') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                <div class="alert alert-danger alert-dismissible fade show border-0 shadow-sm mb-4 fade-in" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ session('error') }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
 
-            <!-- PANEL ATAS: STATUS MESIN & AKSI CEPAT SDK -->
-            <div class="row g-3 mb-4">
-                <!-- Info Status Perangkat -->
-                <div class="col-md-5">
-                    <div class="card card-custom p-4 bg-white h-100">
-                        <h6 class="text-muted small fw-bold mb-3 text-uppercase">Informasi Perangkat</h6>
+            <!-- PANEL ATAS -->
+            <div class="row g-3 mb-4 fade-in">
+                <div class="col-md-4">
+                    <div class="card-custom p-4 bg-white h-100">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Perangkat Aktif</h6>
+                        @if($currentMachine)
                         <div class="d-flex align-items-center mb-3">
-                            <i class="bi bi-cpu-fill fs-2 text-success me-3"></i>
-                            <div>
-                                <h5 class="fw-bold m-0">Solution C100X</h5>
-                                <small class="text-muted">IP Perangkat: 10.10.10.237</small>
-                            </div>
+                            <div class="stat-icon {{ $currentMachine->isOnline() ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' }} me-3"><i class="bi bi-cpu-fill"></i></div>
+                            <div><h5 class="fw-bold mb-0">{{ $currentMachine->machine_name }}</h5><small class="text-muted"><i class="bi bi-hdd-network me-1"></i>IP: {{ $currentMachine->machine_ip }}</small></div>
                         </div>
-                        <hr class="text-muted my-2">
-                        <div class="d-flex justify-content-between align-items-center mt-2">
-                            <span class="small fw-semibold">Status Koneksi Jaringan:</span>
-                            @if(!empty($users))
-                                <span class="badge bg-success-subtle text-success px-2 py-1">
-                                    <span class="status-indicator bg-success me-1"></span> Terhubung (Online)
-                                </span>
-                            @else
-                                <span class="badge bg-danger-subtle text-danger px-2 py-1">
-                                    <span class="status-indicator bg-danger me-1"></span> Offline / Data Kosong
-                                </span>
-                            @endif
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold small">Status:</span>
+                            <span class="badge {{ $currentMachine->getStatusBadgeClass() }}">
+                                <span class="status-indicator bg-{{ $currentMachine->isOnline() ? 'success' : 'danger' }} me-1"></span>
+                                {{ $currentMachine->getStatusLabel() }}
+                            </span>
+                        </div>
+                        <div class="mt-2 d-flex justify-content-between align-items-center"><small class="text-muted">Last ping:</small><small class="text-muted">{{ $currentMachine->getLastPingHuman() }}</small></div>
+                        <div class="d-flex justify-content-between align-items-center"><small class="text-muted">Response:</small><small class="text-muted">{{ $currentMachine->getFormattedResponseTime() }}</small></div>
+                        @else
+                        <div class="text-center py-3"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2 text-danger opacity-50"></i><p class="text-muted small mb-0">Belum ada perangkat aktif</p></div>
+                        @endif
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-custom p-4 bg-white h-100">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-toggles text-primary me-2"></i>Konsol Kendali</h6>
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <form action="{{ route('pengaturan.index', ['view_users' => 1]) }}" method="GET">
+                                    <button type="submit" class="btn btn-outline-primary w-100 text-start"><i class="bi bi-cloud-download me-2"></i>Tarik Data Log</button>
+                                </form>
+                            </div>
+                            <div class="col-6">
+                                <form action="{{ route('pengaturan.sync-time') }}" method="POST">@csrf<button type="submit" class="btn btn-outline-success w-100 text-start"><i class="bi bi-clock-history me-2"></i>Sync Waktu</button></form>
+                            </div>
+                            <div class="col-6">
+                                <form action="{{ route('pengaturan.restart') }}" method="POST" onsubmit="return confirm('Restart mesin?');">@csrf<button type="submit" class="btn btn-outline-warning w-100 text-start"><i class="bi bi-arrow-clockwise me-2"></i>Restart</button></form>
+                            </div>
                         </div>
                     </div>
                 </div>
-
-                <!-- Tombol Kendali Cepat SDK -->
-                <div class="col-md-7">
-                    <div class="card card-custom p-4 bg-white h-100">
-                        <h6 class="text-muted small fw-bold mb-3 text-uppercase">Konsol Kendali Cepat SDK</h6>
-                        <div class="row g-2">
-                            <!-- 1. Tarik Data Utama (VALIDASI KETAT DARI DOKER/SOAP) -->
-                            <div class="col-6">
-                                <form action="{{ route('absensi.tarik') }}" method="POST">
-                                    @csrf
-                                    <button type="submit"
-                                            class="btn btn-light border w-100 text-start py-2 small fw-semibold {{ empty($users) ? 'disabled text-muted' : '' }}"
-                                            {{ empty($users) ? 'disabled' : '' }}>
-                                        <i class="bi bi-cloud-arrow-down {{ empty($users) ? 'text-secondary' : 'text-primary' }} me-2"></i> Sinkronisasi Log Masuk
-                                    </button>
-                                </form>
-                                @if(empty($users))
-                                    <small class="text-danger extra-small mt-1 d-block"><i class="bi bi-exclamation-circle me-1"></i>Data user mesin kosong. Akses tarik dikunci.</small>
-                                @endif
-                            </div>
-                            <!-- 2. Sync Jam Alat -->
-                            <div class="col-6">
-                                <form action="{{ route('pengaturan.sync-time') }}" method="POST">
-                                    @csrf
-                                    <button type="submit" class="btn btn-light border w-100 text-start py-2 small fw-semibold">
-                                        <i class="bi bi-stopwatch text-success me-2"></i> Samakan Waktu Server
-                                    </button>
-                                </form>
-                            </div>
-                            <!-- 3. Remote Reboot -->
-                            <div class="col-6">
-                                <form action="{{ route('pengaturan.restart') }}" method="POST" onsubmit="return confirm('Reboot mesin absensi? Perangkat tidak dapat memindai selama proses mulai ulang.');">
-                                    @csrf
-                                    <button type="submit" class="btn btn-light border w-100 text-start py-2 small fw-semibold">
-                                        <i class="bi bi-arrow-clockwise text-warning me-2"></i> Restart Mesin Fisik
-                                    </button>
-                                </form>
-                            </div>
-                            <!-- 4. Kosongkan Log Transaksi -->
-                            <div class="col-6">
-                                <form action="{{ route('pengaturan.clear') }}" method="POST" onsubmit="return confirm('Hapus seluruh transaksi di dalam memori mesin fisik? Data lokal di database web tetap aman.');">
-                                    @csrf
-                                    <button type="submit" class="btn btn-light border w-100 text-start py-2 text-danger small fw-semibold">
-                                        <i class="bi bi-trash text-danger me-2"></i> Bersihkan Log Mesin
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+                <div class="col-md-4">
+                    <div class="card-custom p-4 bg-white h-100">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-plus-circle text-success me-2"></i>Tambah Perangkat</h6>
+                        <form action="{{ route('pengaturan.machine.store') }}" method="POST">
+                            @csrf
+                            <div class="mb-2"><input type="text" name="machine_name" class="form-control form-control-sm" placeholder="Nama Perangkat" required></div>
+                            <div class="mb-2"><input type="text" name="machine_ip" class="form-control form-control-sm" placeholder="IP Address" required></div>
+                            <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus-lg me-1"></i>Tambah Perangkat</button>
+                        </form>
                     </div>
                 </div>
             </div>
 
-            <!-- PANEL BAWAH: DATA VIEWER & DATA INTERAKSI SDK -->
-            <div class="card card-custom p-4 bg-white">
-                <ul class="nav nav-pills mb-3 border-bottom pb-2" id="sdkTab" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active small" id="user-tab" data-bs-toggle="tab" data-bs-target="#tab-user" type="button" role="tab"><i class="bi bi-people me-1"></i> Data Karyawan Perangkat</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link small" id="fp-tab" data-bs-toggle="tab" data-bs-target="#tab-fp" type="button" role="tab"><i class="bi bi-fingerprint me-1"></i> Pengelola Sidik Jari</button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link small" id="log-tab" data-bs-toggle="tab" data-bs-target="#tab-log" type="button" role="tab"><i class="bi bi-file-earmark-text me-1"></i> Riwayat Log Mentah</button>
-                    </li>
+            <!-- Daftar Perangkat -->
+            <div class="card-custom p-4 bg-white mb-4 fade-in">
+                <div class="d-flex justify-content-between align-items-center mb-3"><h6 class="fw-bold mb-0"><i class="bi bi-list-ul text-primary me-2"></i>Daftar Semua Perangkat</h6></div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead><tr class="border-bottom">
+                            <th class="fw-bold text-muted small">NAMA PERANGKAT</th>
+                            <th class="fw-bold text-muted small">IP ADDRESS</th>
+                            <th class="fw-bold text-muted small">STATUS</th>
+                            <th class="fw-bold text-muted small">LAST PING</th>
+                            <th class="fw-bold text-muted small">RESPONSE</th>
+                            <th class="fw-bold text-muted small">AKSI</th>
+                        </tr></thead>
+                        <tbody>
+                            @forelse($machineStatuses as $machine)
+                            <tr class="border-bottom {{ $machine->isDefault() ? 'table-success' : '' }}">
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="stat-icon {{ $machine->isOnline() ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' }} me-2" style="width: 30px; height: 30px; font-size: 14px;"><i class="bi bi-cpu-fill"></i></div>
+                                        <div><span class="fw-bold small">{{ $machine->machine_name }}</span>@if($machine->isDefault())<span class="badge bg-primary-subtle text-primary ms-1">Default</span>@endif</div>
+                                    </div>
+                                </td>
+                                <td><code class="small">{{ $machine->machine_ip }}</code></td>
+                                <td><span class="badge {{ $machine->getStatusBadgeClass() }}"><span class="status-indicator bg-{{ $machine->isOnline() ? 'success' : 'danger' }} me-1" style="font-size: 6px;"></span>{{ $machine->getStatusLabel() }}</span></td>
+                                <td class="small text-muted">{{ $machine->getLastPingHuman() }}</td>
+                                <td class="small text-muted">{{ $machine->getFormattedResponseTime() }}</td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <form action="{{ route('pengaturan.machine.ping', $machine->id) }}" method="POST" class="d-inline">@csrf<button type="submit" class="btn btn-sm btn-outline-info" title="Ping"><i class="bi bi-send"></i></button></form>
+                                        @if(!$machine->isDefault())
+                                        <form action="{{ route('pengaturan.machine.default', $machine->id) }}" method="POST" class="d-inline">@csrf<button type="submit" class="btn btn-sm btn-outline-primary" title="Default"><i class="bi bi-star"></i></button></form>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr><td colspan="6" class="text-center py-4"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2 text-danger opacity-50"></i><p class="text-muted mb-0">Belum ada perangkat terdaftar</p></td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- DATA VIEWER TABS -->
+            <div class="card-custom p-4 bg-white fade-in">
+                <ul class="nav nav-pills mb-4" id="sdkTab" role="tablist">
+                    <li class="nav-item" role="presentation"><button class="nav-link active" id="user-tab" data-bs-toggle="tab" data-bs-target="#tab-user" type="button" role="tab"><i class="bi bi-people me-1"></i> Data Karyawan</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="fp-tab" data-bs-toggle="tab" data-bs-target="#tab-fp" type="button" role="tab"><i class="bi bi-fingerprint me-1"></i> Sidik Jari</button></li>
+                    <li class="nav-item" role="presentation"><button class="nav-link" id="log-tab" data-bs-toggle="tab" data-bs-target="#tab-log" type="button" role="tab"><i class="bi bi-file-earmark-text me-1"></i> Log Mentah</button></li>
                 </ul>
-
-                <div class="tab-content pt-2" id="sdkTabContent">
-                    <!-- Tab User: Ambil Data & Hapus User dari Mesin -->
-                    <div class="tab-pane fade show active" id="tab-user" role="tabpanel" aria-labelledby="user-tab">
-                        <div class="row g-4">
-                            <div class="col-md-7 border-end">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <span class="text-muted small fw-semibold">Daftar Pengguna Aktif di Memori Alat</span>
-                                    <a href="{{ route('pengaturan.index', ['view_users' => 1]) }}" class="btn btn-sm btn-outline-success">
-                                        <i class="bi bi-arrow-repeat me-1"></i> Refresh Data User
-                                    </a>
-                                </div>
-                                @if(!empty($users))
-                                <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
-                                    <table class="table table-sm table-hover align-middle small">
-                                        <thead class="table-light">
-                                            <tr><th>PIN Alat</th><th>Nama Terdaftar</th></tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($users as $u)
-                                            <tr><td><code>{{ $u['pin'] }}</code></td><td class="fw-semibold text-dark">{{ $u['name'] }}</td></tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                                @else
-                                <div class="text-center py-4 text-danger small bg-light rounded border border-dashed">
-                                    <i class="bi bi-exclamation-triangle fs-3 d-block mb-1"></i>
-                                    Gagal memuat data user dari mesin absensi fisik atau tidak ada user terdaftar.
-                                </div>
-                                @endif
+<div class="tab-content" id="sdkTabContent">
+                    <div class="tab-pane fade @if(request()->has('view_users')) show active @endif" id="tab-user" role="tabpanel">
+                        @if(request()->has('view_users'))
+                            @if(!empty($users))
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead><tr class="border-bottom">
+                                        <th class="fw-bold text-muted small">USER ID</th>
+                                        <th class="fw-bold text-muted small">NAMA</th>
+                                        <th class="fw-bold text-muted small">PIN</th>
+                                        <th class="fw-bold text-muted small">AKSI</th>
+                                    </tr></thead>
+                                    <tbody>
+                                        @forelse($users as $user)
+                                        <tr class="border-bottom">
+                                            <td><code class="small">{{ $user->user_id ?? $user->id }}</code></td>
+                                            <td class="fw-semibold">{{ $user->name ?? $user->nama ?? '-' }}</td>
+                                            <td><code class="small">{{ $user->pin ?? '-' }}</code></td>
+                                            <td>
+                                                <form action="{{ route('pengaturan.hapus-user') }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus user ini dari mesin?');">
+                                                    @csrf
+                                                    <input type="hidden" name="user_id" value="{{ $user->user_id ?? $user->id }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus User"><i class="bi bi-person-dash"></i></button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        @empty
+                                        <tr><td colspan="4" class="text-center py-4"><i class="bi bi-inbox fs-3 d-block mb-2 text-secondary opacity-50"></i><p class="text-muted mb-0">Tidak ada data user</p></td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="col-md-5">
-                                <div class="bg-light p-3 rounded-3">
-                                    <h6 class="fw-bold text-danger small mb-1"><i class="bi bi-person-x-fill me-1"></i> Hapus User Perangkat</h6>
-                                    <p class="text-muted extra-small mb-3">Hapus profil user permanen dari mesin absensi fisik menggunakan User ID.</p>
-                                    <form action="{{ route('pengaturan.hapus-user') }}" method="POST" onsubmit="return confirm('Hapus akun pengguna dari memori alat?');">
-                                        @csrf
-                                        <div class="mb-3">
-                                            <label class="form-label extra-small fw-semibold text-dark">UserID / PIN Alat</label>
-                                            <input type="text" name="user_id" class="form-control form-control-sm" placeholder="Contoh: 1" required>
-                                        </div>
-                                        <button type="submit" class="btn btn-danger btn-sm w-100">Eksekusi Hapus Akun</button>
-                                    </form>
-                                </div>
+                            <small class="text-muted">{{ count($users) }} user ditemukan</small>
+                            <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-3 mt-3" role="alert">
+                                <i class="bi bi-check-circle-fill me-2"></i>Data karyawan berhasil ditarik dari mesin ({{ count($users) }} user).<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Tab Sidik Jari: Download, Upload & Hapus Template -->
-                    <div class="tab-pane fade" id="tab-fp" role="tabpanel" aria-labelledby="fp-tab">
-                        <div class="row g-4">
-                            <div class="col-md-6 border-end">
-                                <h6 class="fw-bold text-success small mb-2"><i class="bi bi-download me-1"></i> Ambil & Download Template</h6>
-                                <form action="{{ route('pengaturan.index') }}" method="GET" class="row g-2 mb-3 align-items-end">
-                                    <input type="hidden" name="download_fp" value="1">
-                                    <div class="col-5"><input type="text" name="user_id" class="form-control form-control-sm" placeholder="User ID" value="{{ request('user_id') }}" required></div>
-                                    <div class="col-4"><input type="number" name="finger_id" class="form-control form-control-sm" placeholder="Finger ID" value="{{ request('finger_id') ?? '0' }}" required></div>
-                                    <div class="col-3"><button type="submit" class="btn btn-success btn-sm w-100">Ambil</button></div>
-                                </form>
-                                @if(!empty($templates))
-                                <div class="p-2 border rounded bg-light" style="max-height: 150px; overflow-y: auto;">
-                                    @foreach($templates as $t)
-                                    <div class="extra-small text-muted mb-1"><strong>Size:</strong> {{ $t['size'] }} | <strong>Valid:</strong> {{ $t['valid'] }}</div>
-                                    <code class="extra-small text-dark text-break">{{ $t['template'] }}</code>
-                                    @endforeach
-                                </div>
-                                @endif
-                            </div>
-                            <div class="col-md-6">
-                                <div class="bg-light p-3 rounded-3 mb-2">
-                                    <h6 class="fw-bold text-primary small mb-2"><i class="bi bi-cloud-arrow-up-fill me-1"></i> Upload / Hapus Sidik Jari Manual</h6>
-                                    <form id="fpActionForm" method="POST">
-                                        @csrf
-                                        <div class="row g-2 mb-2">
-                                            <div class="col-6"><input type="text" name="user_id" class="form-control form-control-sm" placeholder="User ID" required></div>
-                                            <div class="col-6"><input type="number" name="finger_id" class="form-control form-control-sm" placeholder="Finger ID" value="0" required></div>
-                                        </div>
-                                        <div class="mb-2">
-                                            <textarea name="template" id="fpTemplateArea" class="form-control form-control-sm" rows="2" placeholder="Paste string template sidik jari (khusus untuk upload)..."></textarea>
-                                        </div>
-                                        <div class="d-flex gap-2">
-                                            <button type="button" onclick="submitFpForm('{{ route('pengaturan.upload-fp') }}', true)" class="btn btn-primary btn-sm w-50">Upload Data</button>
-                                            <button type="button" onclick="submitFpForm('{{ route('pengaturan.hapus-fp') }}', false)" class="btn btn-outline-danger btn-sm w-50">Hapus Data</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tab Log Mentah: Log Transaksi Mesin Terkombinasi Nama -->
-                    <div class="tab-pane fade" id="tab-log" role="tabpanel" aria-labelledby="log-tab">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span class="text-muted small fw-semibold">Log Transaksi Aktivitas Mesin Terkini</span>
-                            <a href="{{ route('pengaturan.index', ['view_logs' => 1]) }}" class="btn btn-sm btn-outline-primary">
-                                <i class="bi bi-eye me-1"></i> Tampilkan Log Mentah Perangkat
-                            </a>
-                        </div>
-                        @if(!empty($logs))
-                        <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
-                            <table class="table table-sm table-hover align-middle small">
-                                <thead class="table-light text-muted">
-                                    <tr><th>UserID</th><th>Nama Karyawan</th><th>Waktu Transaksi</th><th>Verifikasi</th><th>Status</th></tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($logs as $l)
-                                    <tr>
-                                        <td><code>{{ $l['pin'] }}</code></td>
-                                        <td class="fw-semibold">{{ $l['nama'] }}</td>
-                                        <td>{{ $l['datetime'] }}</td>
-                                        <td><span class="text-muted extra-small">Method ({{ $l['verified'] }})</span></td>
-                                        <td><span class="badge bg-secondary-subtle text-secondary">Code ({{ $l['status'] }})</span></td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
+                            @else
+                            <div class="text-center py-5"><i class="bi bi-exclamation-triangle fs-1 d-block mb-3 text-warning opacity-50"></i><p class="text-muted">Data karyawan dari mesin belum tersedia. Pastikan mesin menyala dan coba lagi.</p></div>
+                            @endif
                         @else
-                        <div class="text-center py-4 text-muted small">Klik tombol 'Tampilkan Log Mentah Perangkat' untuk melakukan pembacaan langsung.</div>
+                            <div class="text-center py-5"><i class="bi bi-people fs-1 d-block mb-3 text-secondary opacity-50"></i><p class="text-muted">Tekan "Tarik Data Log" untuk melihat data karyawan dari mesin</p></div>
+                        @endif
+                    </div>
+                    <div class="tab-pane fade @if(request()->has('download_fp')) show active @endif" id="tab-fp" role="tabpanel">
+                        @if(request()->has('download_fp'))
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4">
+                                    <select name="user_id" id="fpUserId" class="form-select form-select-sm">
+                                        <option value="1">User ID 1</option>
+                                        @foreach($users as $user)
+                                        <option value="{{ $user->user_id ?? $user->id }}" {{ ($request->input('user_id') ?? '1') == ($user->user_id ?? $user->id) ? 'selected' : '' }}>{{ $user->name ?? $user->nama ?? '-' }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <select name="finger_id" id="fpFingerId" class="form-select form-select-sm">
+                                        <option value="0" {{ ($request->input('finger_id') ?? '0') == '0' ? 'selected' : '' }}>Jari 0</option>
+                                        <option value="1" {{ ($request->input('finger_id') ?? '0') == '1' ? 'selected' : '' }}>Jari 1</option>
+                                        <option value="2" {{ ($request->input('finger_id') ?? '0') == '2' ? 'selected' : '' }}>Jari 2</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4 d-flex align-items-end">
+                                    <form action="{{ route('pengaturan.upload-fp') }}" method="POST" class="d-flex gap-2">
+                                        @csrf
+                                        <input type="hidden" name="user_id" id="uploadUserId" value="1">
+                                        <input type="hidden" name="finger_id" id="uploadFingerId" value="0">
+                                        <input type="hidden" name="template" id="fpTemplate" value="">
+                                        <button type="submit" class="btn btn-success btn-sm w-100"><i class="bi bi-upload me-1"></i>Upload FP</button>
+                                    </form>
+                                </div>
+                            </div>
+                            @if(!empty($templates))
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead><tr class="border-bottom">
+                                        <th class="fw-bold text-muted small">USER ID</th>
+                                        <th class="fw-bold text-muted small">FINGER ID</th>
+                                        <th class="fw-bold text-muted small">SIZE</th>
+                                        <th class="fw-bold text-muted small">TEMPLATE</th>
+                                    </tr></thead>
+                                    <tbody>
+                                        @forelse($templates as $tpl)
+                                        <tr class="border-bottom">
+                                            <td><code class="small">{{ $tpl->user_id ?? '-' }}</code></td>
+                                            <td><code class="small">{{ $tpl->finger_id ?? '-' }}</code></td>
+                                            <td><code class="small">{{ $tpl->size ?? '-' }}</code></td>
+                                            <td><code class="small">{{ substr($tpl->template ?? '', 0, 30) }}...</code></td>
+                                        </tr>
+                                        @empty
+                                        <tr><td colspan="4" class="text-center py-4"><p class="text-muted mb-0">Tidak ada template</p></td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                            @else
+                            <div class="text-center py-4"><p class="text-muted">Tidak ada data template sidik jari</p></div>
+                            @endif
+                        @else
+                            <div class="text-center py-5"><i class="bi bi-fingerprint fs-1 d-block mb-3 text-secondary opacity-50"></i><p class="text-muted">Tekan "Tarik Data Log" lalu pilih user untuk melihat/mengelola sidik jari</p></div>
+                        @endif
+                    </div>
+                    <div class="tab-pane fade @if(request()->has('view_logs')) show active @endif" id="tab-log" role="tabpanel">
+                        @if(request()->has('view_logs'))
+                            @if(!empty($logs))
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle">
+                                    <thead><tr class="border-bottom">
+                                        <th class="fw-bold text-muted small">TANGGAL</th>
+                                        <th class="fw-bold text-muted small">WAKTU</th>
+                                        <th class="fw-bold text-muted small">NAMA</th>
+                                        <th class="fw-bold text-muted small">PIN</th>
+                                        <th class="fw-bold text-muted small">VERIFY</th>
+                                    </tr></thead>
+                                    <tbody>
+                                        @forelse($logs as $log)
+                                        <tr class="border-bottom">
+                                            <td class="small">{{ $log->tanggal ?? $log->date ?? '-' }}</td>
+                                            <td class="small">{{ $log->waktu ?? $log->time ?? '-' }}</td>
+                                            <td class="fw-semibold small">{{ $log->name ?? $log->nama ?? '-' }}</td>
+                                            <td><code class="small">{{ $log->pin ?? '-' }}</code></td>
+                                            <td><span class="badge {{ ($log->verify ?? '') === 'FINGERPRINT' ? 'bg-success-subtle text-success' : 'bg-info-subtle text-info' }}">{{ $log->verify ?? '-' }}</span></td>
+                                        </tr>
+                                        @empty
+                                        <tr><td colspan="5" class="text-center py-4"><p class="text-muted mb-0">Tidak ada log mentah</p></td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                            <small class="text-muted">{{ count($logs) }} log ditemukan</small>
+                            <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-3 mt-3" role="alert">
+                                <i class="bi bi-check-circle-fill me-2"></i>Log mentah berhasil ditarik dari mesin ({{ count($logs) }} log).<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                            @else
+                            <div class="text-center py-5"><i class="bi bi-exclamation-triangle fs-1 d-block mb-3 text-warning opacity-50"></i><p class="text-muted">Tidak ada log mentah. Mesin mungkin offline atau koneksi gagal.</p></div>
+                            @endif
+                        @else
+                            <div class="text-center py-5"><i class="bi bi-file-earmark-text fs-1 d-block mb-3 text-secondary opacity-50"></i><p class="text-muted">Tekan "Tarik Data Log" untuk melihat log mentah dari mesin</p></div>
                         @endif
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    // AUTO-LOAD USER OTOMATIS SAAT HALAMAN DIBAKA PERTAMA KALI
-    document.addEventListener("DOMContentLoaded", function() {
-        const urlParams = new URLSearchParams(window.location.search);
-
-        // Pemicu otomatis load user jika URL dipanggil tanpa query parameter
-        if (!urlParams.has('view_users') && !urlParams.has('download_fp') && !urlParams.has('view_logs')) {
-            window.location.href = "{{ route('pengaturan.index', ['view_users' => 1]) }}";
-            return;
-        }
-
-        let activeTabId = "#user-tab";
-        if (urlParams.has('download_fp')) {
-            activeTabId = "#fp-tab";
-        } else if (urlParams.has('view_logs')) {
-            activeTabId = "#log-tab";
-        }
-
-        const triggerEl = document.querySelector(activeTabId);
-        if (triggerEl) {
-            const tab = new bootstrap.Tab(triggerEl);
-            tab.show();
-        }
-    });
-
-    function submitFpForm(actionUrl, isUpload) {
-        const form = document.getElementById('fpActionForm');
-        const templateArea = document.getElementById('fpTemplateArea');
-
-        if (isUpload) {
-            if (!templateArea.value.trim()) {
-                alert('String template wajib diisi untuk melakukan upload data.');
-                templateArea.focus();
-                return;
-            }
-        } else {
-            if(!confirm('Hapus template sidik jari ini dari memori mesin fisik?')) return;
-        }
-
-        form.action = actionUrl;
-        form.submit();
+    function submitFpForm() {
+        var userId = document.getElementById('fpUserId').value;
+        var fingerId = document.getElementById('fpFingerId').value;
+        var uploadUserId = document.getElementById('uploadUserId');
+        var uploadFingerId = document.getElementById('uploadFingerId');
+        if (uploadUserId) uploadUserId.value = userId;
+        if (uploadFingerId) uploadFingerId.value = fingerId;
     }
 </script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
