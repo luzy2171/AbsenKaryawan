@@ -63,6 +63,11 @@
                                 <i class="bi bi-gear me-2"></i> Kontrol Mesin
                             </a>
                         </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('admin/maintenance*') ? 'active' : '' }}" href="{{ route('admin.maintenance.index') }}">
+                        <i class="bi bi-database-fill-gear me-2"></i> Maintenance DB
+                    </a>
+                </li>
                         <li class="nav-item">
                             <a class="nav-link {{ request()->is('admin/users*') ? 'active' : '' }}"
                                 href="{{ url('/admin/users') }}">

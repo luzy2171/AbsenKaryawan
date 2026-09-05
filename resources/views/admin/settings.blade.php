@@ -56,6 +56,11 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link {{ request()->is('admin/maintenance*') ? 'active' : '' }}" href="{{ route('admin.maintenance.index') }}">
+                        <i class="bi bi-database-fill-gear me-2"></i> Maintenance DB
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" href="{{ url('/admin/users') }}">
                         <i class="bi bi-person-gear me-2"></i> Manajemen User
                     </a>
