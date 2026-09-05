@@ -199,12 +199,18 @@ class AbsensiController extends Controller
         $request->validate([
             'tanggal_mulai'   => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'karyawan_id'     => 'nullable|string'
+            'karyawan_id'     => 'nullable'
         ]);
 
         $mulai      = $request->tanggal_mulai;
         $selesai    = $request->tanggal_selesai;
-        $karyawanIds = $request->karyawan_id ? explode(',', $request->karyawan_id) : [];
+        
+        // Handle array from checkbox or string from legacy select
+        if (is_array($request->karyawan_id)) {
+            $karyawanIds = $request->karyawan_id;
+        } else {
+            $karyawanIds = $request->karyawan_id ? explode(',', $request->karyawan_id) : [];
+        }
 
         $query = Attendance::with('karyawan')->whereBetween('tanggal', [$mulai, $selesai]);
 
@@ -292,12 +298,18 @@ class AbsensiController extends Controller
         $request->validate([
             'tanggal_mulai'   => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'karyawan_id'     => 'nullable|string'
+            'karyawan_id'     => 'nullable'
         ]);
 
         $mulai      = $request->tanggal_mulai;
         $selesai    = $request->tanggal_selesai;
-        $karyawanIds = $request->karyawan_id ? explode(',', $request->karyawan_id) : [];
+        
+        // Handle array from checkbox or string from legacy select
+        if (is_array($request->karyawan_id)) {
+            $karyawanIds = $request->karyawan_id;
+        } else {
+            $karyawanIds = $request->karyawan_id ? explode(',', $request->karyawan_id) : [];
+        }
 
         $query = Attendance::with('karyawan')->whereBetween('tanggal', [$mulai, $selesai]);
 
