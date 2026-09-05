@@ -149,6 +149,7 @@
                                 <th class="fw-bold text-muted small">NAMA</th>
                                 <th class="fw-bold text-muted small">DEPARTEMEN</th>
                                 <th class="fw-bold text-muted small">JABATAN</th>
+                                <th class="fw-bold text-muted small">SISA CUTI</th>
                                 <th class="fw-bold text-muted small">STATUS</th>
                                 <th class="fw-bold text-muted small text-center">AKSI</th>
                             </tr>
@@ -171,6 +172,11 @@
                                 </td>
                                 <td class="text-muted">{{ $k->departemen ?? '-' }}</td>
                                 <td class="text-muted">{{ $k->jabatan ?? '-' }}</td>
+                                <td>
+                                    <span class="badge {{ $k->sisaCuti() <= 3 ? 'bg-danger-subtle text-danger' : 'bg-primary-subtle text-primary' }}">
+                                        {{ $k->sisaCuti() }} Hari
+                                    </span>
+                                </td>
                                 <td>
                                     <span class="badge bg-success-subtle text-success">
                                         <i class="bi bi-circle-fill me-1" style="font-size: 6px;"></i>{{ $k->status }}

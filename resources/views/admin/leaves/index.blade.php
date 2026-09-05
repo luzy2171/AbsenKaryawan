@@ -268,7 +268,7 @@
                         <select name="karyawan_id" class="form-select" required>
                             <option value="">-- Pilih Karyawan --</option>
                             @foreach($karyawans as $k)
-                                <option value="{{ $k->id }}">[{{ $k->id_karyawan }}] {{ $k->nama }}</option>
+                                <option value="{{ $k->id }}">[{{ $k->id_karyawan }}] {{ $k->nama }} - Sisa Cuti: {{ $k->sisaCuti() }} Hari</option>
                             @endforeach
                         </select>
                     </div>

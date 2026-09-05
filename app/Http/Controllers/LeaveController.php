@@ -50,6 +50,17 @@ class LeaveController extends Controller
             'keterangan' => 'nullable|string',
             'dokumen' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048'
         ]);
+        
+        $karyawan = Karyawan::findOrFail($request->karyawan_id);
+        $lamaHari = Carbon::parse($request->tanggal_mulai)->diffInDays(Carbon::parse($request->tanggal_selesai)) + 1;
+
+        // Validasi Sisa Cuti khusus untuk pengajuan berjenis "Cuti"
+        if ($request->jenis === 'Cuti') {
+            $sisaCuti = $karyawan->sisaCuti();
+            if ($lamaHari > $sisaCuti) {
+                return redirect()->back()->with('error', "Gagal! Sisa cuti tahunan {$karyawan->nama} hanya tersisa $sisaCuti hari, sedangkan pengajuan ini meminta $lamaHari hari.")->withInput();
+            }
+        }
 
         $dokumenPath = null;
         if ($request->hasFile('dokumen')) {
@@ -77,7 +88,12 @@ class LeaveController extends Controller
 
         AuditLogger::logCustom('Izin/Cuti', "Menambahkan pengajuan {$leave->jenis} untuk karyawan ID {$leave->karyawan_id} dari tgl {$leave->tanggal_mulai->format('d/m/Y')} s/d {$leave->tanggal_selesai->format('d/m/Y')}");
 
-        return redirect()->back()->with('status', 'Pengajuan ' . $request->jenis . ' berhasil ditambahkan dan disinkronkan ke laporan absensi.');
+        $pesanSukses = 'Pengajuan ' . $request->jenis . ' berhasil ditambahkan.';
+        if ($request->jenis === 'Cuti') {
+            $pesanSukses .= " Sisa cuti tahunan {$karyawan->nama} sekarang adalah " . $karyawan->sisaCuti() . " hari.";
+        }
+
+        return redirect()->back()->with('status', $pesanSukses);
     }
 
     public function destroy($id)
@@ -100,7 +116,7 @@ class LeaveController extends Controller
         
         AuditLogger::logCustom('Izin/Cuti', "Menghapus data $jenis karyawan ID $karyawan_id");
 
-        return redirect()->back()->with('status', 'Data ' . $jenis . ' berhasil dihapus.');
+        return redirect()->back()->with('status', 'Data ' . $jenis . ' berhasil dihapus. Laporan absensi telah diperbarui.');
     }
     
     /**
