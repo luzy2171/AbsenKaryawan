@@ -179,6 +179,33 @@ class AbsensiController extends Controller
                                 'jam_pulang' => $jam
                             ]);
                             $dataPulangDiupdate++;
+
+                            // CEK LEMBUR OTOMATIS
+                            $jamLemburMulai = DB::table('settings')->where('key', 'jam_lembur_mulai')->value('value') ?? '17:00';
+                            
+                            // Jika jam pulang melewati jam mulai lembur
+                            if ($jam > $jamLemburMulai) {
+                                $waktuMulaiLembur = Carbon::createFromFormat('H:i', $jamLemburMulai);
+                                $waktuPulang = Carbon::createFromFormat('H:i:s', $jam);
+                                
+                                $lamaLembur = $waktuMulaiLembur->diffInMinutes($waktuPulang);
+
+                                if ($lamaLembur > 0) {
+                                    // Update atau buat data lembur baru
+                                    Lembur::updateOrCreate(
+                                        [
+                                            'attendance_id' => $attendanceHariIni->id,
+                                            'karyawan_id'   => $karyawan->id,
+                                            'tanggal'       => $tanggal,
+                                        ],
+                                        [
+                                            'jam_lembur_mulai'   => $jamLemburMulai,
+                                            'jam_lembur_selesai' => $jam,
+                                            'lama_lembur'        => $lamaLembur,
+                                        ]
+                                    );
+                                }
+                            }
                         }
                     }
                 }
