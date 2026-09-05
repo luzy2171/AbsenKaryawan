@@ -46,7 +46,7 @@
                             <i class="bi bi-calendar-check me-2"></i> Absensi
                         </a>
                     </li>
-                    @if(auth()->user()->isSuperadmin())
+                    @if(auth()->user()->isAdmin())
                         <li class="nav-item mt-3">
                             <small class="text-muted px-3 fw-semibold"
                                 style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small>
@@ -56,7 +56,8 @@
                         <i class="bi bi-envelope-paper me-2"></i> Izin & Cuti
                     </a>
                 </li>
-<li class="nav-item">
+                @if(auth()->user()->isSuperadmin())
+                        <li class="nav-item">
                             <a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}"
                                 href="{{ url('/admin/settings') }}">
                                 <i class="bi bi-clock-history me-2"></i> Set Jam Kerja
@@ -85,6 +86,7 @@
                                 <i class="bi bi-journal-text me-2"></i> Audit Logs
                             </a>
                         </li>
+                    @endif
                     @endif
                     <li class="nav-item mt-auto pt-3 border-top">
                         <form action="{{ route('logout') }}" method="POST">

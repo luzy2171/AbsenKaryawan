@@ -85,8 +85,8 @@ Route::middleware('auth')->group(function () {
     });
 
     
-    // ===== MANAJEMEN CUTI & IZIN (Khusus Superadmin) =====
-    Route::prefix('admin/leaves')->name('admin.leaves.')->middleware('superadmin')->group(function () {
+    // ===== MANAJEMEN CUTI & IZIN (Khusus Admin & Superadmin) =====
+    Route::prefix('admin/leaves')->name('admin.leaves.')->middleware('admin')->group(function () {
         Route::get('/', [LeaveController::class, 'index'])->name('index');
         Route::post('/', [LeaveController::class, 'store'])->name('store');
         Route::delete('/{id}', [LeaveController::class, 'destroy'])->name('destroy');
