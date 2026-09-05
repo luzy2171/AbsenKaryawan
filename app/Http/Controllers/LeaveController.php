@@ -70,14 +70,14 @@ class LeaveController extends Controller
             $dokumenPath = str_replace('public/', '', $dokumenPath);
         }
 
-        $leave = Leave::create([
+$leave = Leave::create([
             'karyawan_id' => $request->karyawan_id,
             'tanggal_mulai' => $request->tanggal_mulai,
             'tanggal_selesai' => $request->tanggal_selesai,
             'jenis' => $request->jenis,
             'keterangan' => $request->keterangan,
             'dokumen' => $dokumenPath,
-            'status' => 'Disetujui', // Auto approved since Admin/Superadmin inputs it
+            'status' => 'Menunggu',
             'approved_by' => Auth::id()
         ]);
 
@@ -96,11 +96,15 @@ class LeaveController extends Controller
         return redirect()->back()->with('status', $pesanSukses);
     }
 
-    public function destroy($id)
+public function destroy($id)
     {
         $leave = Leave::findOrFail($id);
         $jenis = $leave->jenis;
         $karyawan_id = $leave->karyawan_id;
+
+        if (auth()->user()->isSuperadmin() === false && auth()->user()->id !== $leave->approved_by) {
+            abort(403, 'Akses ditolak. Anda hanya dapat menghapus pengajuan yang Anda buat.');
+        }
         
         // Hapus dari tabel absensi
         Attendance::where('karyawan_id', $leave->karyawan_id)
