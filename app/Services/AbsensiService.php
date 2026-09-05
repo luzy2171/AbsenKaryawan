@@ -234,8 +234,6 @@ class AbsensiService
         }
         return $templates;
     }
-        return $templates;
-    }
 
     /**
      * 5. CLEAR LOG DATA (Dari SDK Clear Data)
