@@ -218,19 +218,23 @@
                                     <tbody>
                                         @forelse($users as $user)
                                         <tr class="border-bottom">
-                                            <td><code class="small">{{ $user->user_id ?? $user->id }}</code></td>
-                                            <td class="fw-semibold">{{ $user->name ?? $user->nama ?? '-' }}</td>
-                                            <td><code class="small">{{ $user->pin ?? '-' }}</code></td>
+                                            <td><code class="small">{{ is_array($user) ? ($user['pin'] ?? '-') : ($user->pin ?? '-') }}</code></td>
+                                            <td class="fw-semibold small">{{ is_array($user) ? ($user['name'] ?? '-') : ($user->name ?? '-') }}</td>
                                             <td>
-                                                <form action="{{ route('pengaturan.hapus-user') }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus user ini dari mesin?');">
+                                                <span class="badge {{ (is_array($user) ? ($user['privilege'] ?? '0') : ($user->privilege ?? '0')) == '14' ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success' }}">
+                                                    {{ (is_array($user) ? ($user['privilege'] ?? '0') : ($user->privilege ?? '0')) == '14' ? 'ADMIN' : 'USER' }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <form action="{{ route('pengaturan.hapus-user') }}" method="POST" onsubmit="return confirm('Yakin hapus PIN/User ini dari mesin?');">
                                                     @csrf
-                                                    <input type="hidden" name="user_id" value="{{ $user->user_id ?? $user->id }}">
-                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus User"><i class="bi bi-person-dash"></i></button>
+                                                    <input type="hidden" name="user_id" value="{{ is_array($user) ? ($user['pin'] ?? '') : ($user->pin ?? '') }}">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Hapus</button>
                                                 </form>
                                             </td>
                                         </tr>
                                         @empty
-                                        <tr><td colspan="4" class="text-center py-4"><i class="bi bi-inbox fs-3 d-block mb-2 text-secondary opacity-50"></i><p class="text-muted mb-0">Tidak ada data user</p></td></tr>
+                                        <tr><td colspan="4" class="text-center py-4"><p class="text-muted mb-0">Tidak ada user ditemukan</p></td></tr>
                                         @endforelse
                                     </tbody>
                                 </table>
@@ -250,10 +254,11 @@
                         @if(request()->has('download_fp'))
                             <div class="row g-3 mb-3">
                                 <div class="col-md-4">
-                                    <select name="user_id" id="fpUserId" class="form-select form-select-sm">
+                                            <select name="user_id" id="fpUserId" class="form-select form-select-sm">
                                         <option value="1">User ID 1</option>
                                         @foreach($users as $user)
-                                        <option value="{{ $user->user_id ?? $user->id }}" {{ ($request->input('user_id') ?? '1') == ($user->user_id ?? $user->id) ? 'selected' : '' }}>{{ $user->name ?? $user->nama ?? '-' }}</option>
+                                        @php $pin = is_array($user) ? ($user['pin'] ?? '') : ($user->pin ?? ''); @endphp
+                                        <option value="{{ $pin }}" {{ ($request->input('user_id') ?? '1') == $pin ? 'selected' : '' }}>{{ is_array($user) ? ($user['name'] ?? '-') : ($user->name ?? '-') }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -286,10 +291,10 @@
                                     <tbody>
                                         @forelse($templates as $tpl)
                                         <tr class="border-bottom">
-                                            <td><code class="small">{{ $tpl->user_id ?? '-' }}</code></td>
-                                            <td><code class="small">{{ $tpl->finger_id ?? '-' }}</code></td>
-                                            <td><code class="small">{{ $tpl->size ?? '-' }}</code></td>
-                                            <td><code class="small">{{ substr($tpl->template ?? '', 0, 30) }}...</code></td>
+                                            <td><code class="small">{{ is_array($tpl) ? ($tpl['pin'] ?? '-') : ($tpl->pin ?? '-') }}</code></td>
+                                            <td><code class="small">{{ is_array($tpl) ? ($tpl['finger_id'] ?? '-') : ($tpl->finger_id ?? '-') }}</code></td>
+                                            <td><code class="small">{{ is_array($tpl) ? ($tpl['size'] ?? '-') : ($tpl->size ?? '-') }}</code></td>
+                                            <td><code class="small">{{ substr(is_array($tpl) ? ($tpl['template'] ?? '') : ($tpl->template ?? ''), 0, 30) }}...</code></td>
                                         </tr>
                                         @empty
                                         <tr><td colspan="4" class="text-center py-4"><p class="text-muted mb-0">Tidak ada template</p></td></tr>
@@ -311,7 +316,7 @@
                                 <table class="table table-hover align-middle">
                                     <thead><tr class="border-bottom">
                                         <th class="fw-bold text-muted small">TANGGAL</th>
-                                        <th class="fw-bold text-muted small">WAKTU</th>
+                                        <th class="fw-bold text-muted small">WAKTU (DATETIME)</th>
                                         <th class="fw-bold text-muted small">NAMA</th>
                                         <th class="fw-bold text-muted small">PIN</th>
                                         <th class="fw-bold text-muted small">VERIFY</th>
@@ -319,14 +324,13 @@
                                     <tbody>
                                         @forelse($logs as $log)
                                         <tr class="border-bottom">
-                                            <td class="small">{{ $log->tanggal ?? $log->date ?? '-' }}</td>
-                                            <td class="small">{{ $log->waktu ?? $log->time ?? '-' }}</td>
-                                            <td class="fw-semibold small">{{ $log->name ?? $log->nama ?? '-' }}</td>
-                                            <td><code class="small">{{ $log->pin ?? '-' }}</code></td>
-                                            <td><span class="badge {{ ($log->verify ?? '') === 'FINGERPRINT' ? 'bg-success-subtle text-success' : 'bg-info-subtle text-info' }}">{{ $log->verify ?? '-' }}</span></td>
+                                            <td class="small">{{ is_array($log) ? ($log['datetime'] ?? '-') : ($log->datetime ?? '-') }}</td>
+                                            <td class="fw-semibold small">{{ is_array($log) ? ($log['name'] ?? '-') : ($log->name ?? '-') }}</td>
+                                            <td><code class="small">{{ is_array($log) ? ($log['pin'] ?? '-') : ($log->pin ?? '-') }}</code></td>
+                                            <td><span class="badge bg-success-subtle text-success">{{ (is_array($log) ? ($log['verified'] ?? '0') : ($log->verified ?? '0')) == '1' ? 'FINGERPRINT' : 'PASSWORD/LAINNYA' }}</span></td>
                                         </tr>
                                         @empty
-                                        <tr><td colspan="5" class="text-center py-4"><p class="text-muted mb-0">Tidak ada log mentah</p></td></tr>
+                                        <tr><td colspan="4" class="text-center py-4"><p class="text-muted mb-0">Tidak ada log mentah</p></td></tr>
                                         @endforelse
                                     </tbody>
                                 </table>
