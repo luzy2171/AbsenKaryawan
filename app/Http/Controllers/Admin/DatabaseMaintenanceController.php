@@ -79,6 +79,14 @@ class DatabaseMaintenanceController extends Controller
             'confirm_text' => 'required|in:HAPUS PERMANEN'
         ]);
 
+        // Pastikan tidak menghapus bulan saat ini
+        $bulanSekarang = Carbon::now()->month;
+        $tahunSekarang = Carbon::now()->year;
+
+        if ($request->bulan == $bulanSekarang && $request->tahun == $tahunSekarang) {
+            return back()->with('error', 'Anda tidak dapat menghapus data untuk bulan yang sedang berjalan. Biarkan data bulan ini tetap ada untuk keperluan audit.');
+        }
+
         $tanggalMulai = Carbon::create($request->tahun, $request->bulan, 1)->startOfMonth()->toDateString();
         $tanggalSelesai = Carbon::create($request->tahun, $request->bulan, 1)->endOfMonth()->toDateString();
         $namaBulan = Carbon::create($request->tahun, $request->bulan, 1)->translatedFormat('F Y');

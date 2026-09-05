@@ -10,6 +10,8 @@ use App\Http\Controllers\PengaturanController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Admin\DatabaseMaintenanceController;
+use App\Http\Controllers\LeaveController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -80,6 +82,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/store', [UserController::class, 'store'])->name('store');
         Route::post('/update/{id}', [UserController::class, 'update'])->name('update');
         Route::delete('/{id}', [UserController::class, 'destroy'])->name('destroy');
+    });
+
+    
+    // ===== MANAJEMEN CUTI & IZIN (Khusus Superadmin) =====
+    Route::prefix('admin/leaves')->name('admin.leaves.')->middleware('superadmin')->group(function () {
+        Route::get('/', [LeaveController::class, 'index'])->name('index');
+        Route::post('/', [LeaveController::class, 'store'])->name('store');
+        Route::delete('/{id}', [LeaveController::class, 'destroy'])->name('destroy');
     });
 
     // ===== MANAJEMEN DATABASE (Khusus Superadmin) =====

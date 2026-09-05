@@ -6,12 +6,12 @@
       "name": "Juan Router",
       "options": {
         "baseURL": "https://router.juan.web.id/v1",
-        "apiKey": "sk-EayV4hoCPZ0SKu8wjmd7vXhQZSe0q18JNnvoqCjqc27UBMri"
+        "apiKey": "sk-0jBE8dyoTbtSGimb6RbmEa4hts3ef1iUwOesUuLxKd272IKM"
       },
       "models": {
-        "claude-sonnet-4-5": {}
+        "gemini-3.1-pro": {}
       }
     }
   },
-  "model": "juan-router/claude-sonnet-4-5"
+  "model": "juan-router/gemini-3.1-pro"
 }
