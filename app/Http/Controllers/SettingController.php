@@ -28,11 +28,11 @@ class SettingController extends Controller
         // Get old values for audit
         $oldSettings = DB::table('settings')->pluck('value', 'key')->toArray();
 
-        DB::table('settings')->where('key', 'jam_masuk')->update(['value' => $request->jam_masuk, 'updated_at' => now()]);
-        DB::table('settings')->where('key', 'jam_pulang')->update(['value' => $request->jam_pulang, 'updated_at' => now()]);
-        DB::table('settings')->where('key', 'toleransi_terlambat')->update(['value' => $request->toleransi_terlambat, 'updated_at' => now()]);
-        DB::table('settings')->where('key', 'auto_pull_interval')->update(['value' => $request->auto_pull_interval, 'updated_at' => now()]);
-        DB::table('settings')->where('key', 'jam_lembur_mulai')->update(['value' => $request->jam_lembur_mulai, 'updated_at' => now()]);
+        DB::table('settings')->updateOrInsert(['key' => 'jam_masuk'], ['value' => $request->jam_masuk, 'updated_at' => now()]);
+        DB::table('settings')->updateOrInsert(['key' => 'jam_pulang'], ['value' => $request->jam_pulang, 'updated_at' => now()]);
+        DB::table('settings')->updateOrInsert(['key' => 'toleransi_terlambat'], ['value' => $request->toleransi_terlambat, 'updated_at' => now()]);
+        DB::table('settings')->updateOrInsert(['key' => 'auto_pull_interval'], ['value' => $request->auto_pull_interval, 'updated_at' => now()]);
+        DB::table('settings')->updateOrInsert(['key' => 'jam_lembur_mulai'], ['value' => $request->jam_lembur_mulai, 'updated_at' => now()]);
 
         // Log audit
         AuditLogger::settingsUpdated($oldSettings, [
