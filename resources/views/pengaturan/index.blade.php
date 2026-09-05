@@ -213,7 +213,7 @@
                 </ul>
 <div class="tab-content" id="sdkTabContent">
                     <div class="tab-pane fade @if(request()->has('view_users') || (!request()->has('view_users') && !request()->has('download_fp') && !request()->has('view_logs'))) show active @endif" id="tab-user" role="tabpanel">
-                        @if(request()->has('view_users'))
+                        @if(true) <!-- Selalu jalankan karena user di-autoload di controller -->
                             @if(!empty($users))
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle">
