@@ -127,9 +127,7 @@
                         <h6 class="fw-bold mb-3"><i class="bi bi-toggles text-primary me-2"></i>Konsol Kendali</h6>
                         <div class="row g-2">
                             <div class="col-12">
-                                <form action="{{ route('pengaturan.index', ['view_users' => 1]) }}" method="GET">
-                                    <button type="submit" class="btn btn-outline-primary w-100 text-start"><i class="bi bi-cloud-download me-2"></i>Tarik Data Log</button>
-                                </form>
+                                <a href="{{ route('pengaturan.index', ['view_users' => 1]) }}" class="btn btn-outline-primary w-100 text-start"><i class="bi bi-cloud-download me-2"></i>Tarik Data Log</a>
                             </div>
                             <div class="col-6">
                                 <form action="{{ route('pengaturan.sync-time') }}" method="POST">@csrf<button type="submit" class="btn btn-outline-success w-100 text-start"><i class="bi bi-clock-history me-2"></i>Sync Waktu</button></form>
@@ -199,12 +197,22 @@
             <!-- DATA VIEWER TABS -->
             <div class="card-custom p-4 bg-white fade-in">
                 <ul class="nav nav-pills mb-4" id="sdkTab" role="tablist">
-                    <li class="nav-item" role="presentation"><button class="nav-link active" id="user-tab" data-bs-toggle="tab" data-bs-target="#tab-user" type="button" role="tab"><i class="bi bi-people me-1"></i> Data Karyawan</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link" id="fp-tab" data-bs-toggle="tab" data-bs-target="#tab-fp" type="button" role="tab"><i class="bi bi-fingerprint me-1"></i> Sidik Jari</button></li>
-                    <li class="nav-item" role="presentation"><button class="nav-link" id="log-tab" data-bs-toggle="tab" data-bs-target="#tab-log" type="button" role="tab"><i class="bi bi-file-earmark-text me-1"></i> Log Mentah</button></li>
+                    <li class="nav-item" role="presentation">
+                        <a href="{{ route('pengaturan.index', ['view_users' => 1]) }}" class="nav-link @if(request()->has('view_users') || (!request()->has('view_users') && !request()->has('download_fp') && !request()->has('view_logs'))) active @endif">
+                            <i class="bi bi-people me-1"></i> Data Karyawan
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link @if(request()->has('download_fp')) active @endif" id="fp-tab" data-bs-toggle="tab" data-bs-target="#tab-fp" type="button" role="tab"><i class="bi bi-fingerprint me-1"></i> Sidik Jari</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a href="{{ route('pengaturan.index', ['view_logs' => 1]) }}" class="nav-link @if(request()->has('view_logs')) active @endif">
+                            <i class="bi bi-file-earmark-text me-1"></i> Log Mentah
+                        </a>
+                    </li>
                 </ul>
 <div class="tab-content" id="sdkTabContent">
-                    <div class="tab-pane fade @if(request()->has('view_users')) show active @endif" id="tab-user" role="tabpanel">
+                    <div class="tab-pane fade @if(request()->has('view_users') || (!request()->has('view_users') && !request()->has('download_fp') && !request()->has('view_logs'))) show active @endif" id="tab-user" role="tabpanel">
                         @if(request()->has('view_users'))
                             @if(!empty($users))
                             <div class="table-responsive">

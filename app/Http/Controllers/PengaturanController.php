@@ -23,8 +23,12 @@ class PengaturanController extends Controller
         $templates = [];
         $currentMachine = $primaryMachine;
 
-        // Fitur 1: Aksi tampilkan list User dari Mesin
-        if ($request->has('view_users')) {
+        // Auto load users if nothing is requested but we want to show it as default
+        // So that "Data Karyawan" is always visible without needing to press "Tarik Data"
+        $shouldViewUsers = $request->has('view_users') || (!$request->has('view_logs') && !$request->has('download_fp'));
+
+        // Fitur 1: Aksi tampilkan list User dari Mesin (Otomatis load)
+        if ($shouldViewUsers) {
             $startTime = microtime(true);
             $users = $absensiService->getAllUsers();
             
