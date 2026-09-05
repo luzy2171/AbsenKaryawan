@@ -16,7 +16,6 @@
         .month-card.empty-data { border-left-color: var(--gray-300); opacity: 0.7; }
         .stat-box { border-radius: 12px; padding: 15px; text-align: center; }
         .bg-red-soft { background-color: #fee2e2; color: #dc2626; }
-        .w-33 { width: 33.333333%; }
     </style>
 </head>
 <body>
@@ -71,39 +70,30 @@
 
             <!-- STATISTIK DB -->
             <div class="row g-3 mb-4 fade-in">
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="card-custom bg-white p-3 d-flex align-items-center">
                         <div class="stat-icon bg-primary-subtle text-primary me-3 fs-3"><i class="bi bi-database"></i></div>
                         <div>
                             <h4 class="fw-bold m-0">{{ number_format($totalAbsensiDB) }}</h4>
-                            <small class="text-muted">Baris Absensi</small>
+                            <small class="text-muted">Total Baris Absensi di DB</small>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="card-custom bg-white p-3 d-flex align-items-center">
                         <div class="stat-icon bg-info-subtle text-info me-3 fs-3"><i class="bi bi-clock-history"></i></div>
                         <div>
                             <h4 class="fw-bold m-0">{{ number_format($totalLemburDB) }}</h4>
-                            <small class="text-muted">Baris Lembur</small>
+                            <small class="text-muted">Total Baris Lembur di DB</small>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-3">
-                    <div class="card-custom bg-white p-3 d-flex align-items-center">
-                        <div class="stat-icon bg-secondary-subtle text-secondary me-3 fs-3"><i class="bi bi-journal-text"></i></div>
-                        <div>
-                            <h4 class="fw-bold m-0">{{ number_format($totalLogsDB) }}</h4>
-                            <small class="text-muted">Baris Audit Logs</small>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <div class="card-custom bg-white p-3 d-flex align-items-center">
                         <div class="stat-icon bg-warning-subtle text-warning me-3 fs-3"><i class="bi bi-hdd"></i></div>
                         <div>
                             <h4 class="fw-bold m-0">{{ $dbSizeMB }} MB</h4>
-                            <small class="text-muted">Ukuran Tabel</small>
+                            <small class="text-muted">Estimasi Ukuran Tabel</small>
                         </div>
                     </div>
                 </div>
@@ -142,21 +132,17 @@
                         </div>
                         
                         <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
-                            <div class="text-center w-33 border-end">
-                                <h3 class="fw-bold text-primary m-0" style="font-size: 1.25rem;">{{ number_format($rekap['jumlah_absensi']) }}</h3>
-                                <small class="text-muted" style="font-size: 10px;">Record Absen</small>
+                            <div class="text-center w-50 border-end">
+                                <h3 class="fw-bold text-primary m-0">{{ number_format($rekap['jumlah_absensi']) }}</h3>
+                                <small class="text-muted" style="font-size: 11px;">Record Absen</small>
                             </div>
-                            <div class="text-center w-33 border-end">
-                                <h3 class="fw-bold text-info m-0" style="font-size: 1.25rem;">{{ number_format($rekap['jumlah_lembur']) }}</h3>
-                                <small class="text-muted" style="font-size: 10px;">Record Lembur</small>
-                            </div>
-                            <div class="text-center w-33" style="cursor: pointer;" onclick="window.location.href='{{ route('admin.audit-logs.index', ['bulan' => $rekap['bulan_angka'], 'tahun' => $rekap['tahun']]) }}'" title="Klik untuk lihat detail logs">
-                                <h3 class="fw-bold text-secondary m-0 text-decoration-underline" style="font-size: 1.25rem;">{{ number_format($rekap['jumlah_logs']) }}</h3>
-                                <small class="text-muted" style="font-size: 10px;">Audit Logs</small>
+                            <div class="text-center w-50">
+                                <h3 class="fw-bold text-info m-0">{{ number_format($rekap['jumlah_lembur']) }}</h3>
+                                <small class="text-muted" style="font-size: 11px;">Record Lembur</small>
                             </div>
                         </div>
 
-                        @if($rekap['jumlah_absensi'] > 0 || $rekap['jumlah_logs'] > 0)
+                        @if($rekap['jumlah_absensi'] > 0)
                             <button type="button" class="btn btn-outline-danger w-100" onclick="showPurgeModal('{{ $rekap['bulan_angka'] }}', '{{ $rekap['bulan_nama'] }}', '{{ $rekap['tahun'] }}', '{{ $rekap['jumlah_absensi'] }}')">
                                 <i class="bi bi-trash3 me-1"></i> Kosongkan Bulan Ini
                             </button>

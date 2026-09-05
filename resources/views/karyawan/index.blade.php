@@ -26,12 +26,7 @@
                 </div>
             </div>
             <ul class="nav flex-column">
-                                <li class="nav-item">
-                    <a class="nav-link {{ request()->is('admin/leaves*') ? 'active' : '' }}" href="{{ route('admin.leaves.index') }}">
-                        <i class="bi bi-envelope-paper me-2"></i> Izin & Cuti
-                    </a>
-                </li>
-<li class="nav-item">
+                <li class="nav-item">
                     <a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ url('/dashboard') }}">
                         <i class="bi bi-grid me-2"></i> Dashboard
                     </a>
@@ -50,7 +45,12 @@
                 <li class="nav-item mt-3">
                     <small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small>
                 </li>
-                <li class="nav-item">
+                                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('admin/leaves*') ? 'active' : '' }}" href="{{ route('admin.leaves.index') }}">
+                        <i class="bi bi-envelope-paper me-2"></i> Izin & Cuti
+                    </a>
+                </li>
+<li class="nav-item">
                     <a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}" href="{{ url('/admin/settings') }}">
                         <i class="bi bi-clock-history me-2"></i> Set Jam Kerja
                     </a>
