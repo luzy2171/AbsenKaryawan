@@ -145,8 +145,8 @@
                                 <h3 class="fw-bold text-info m-0" style="font-size: 1.25rem;">{{ number_format($rekap['jumlah_lembur']) }}</h3>
                                 <small class="text-muted" style="font-size: 10px;">Record Lembur</small>
                             </div>
-                            <div class="text-center w-33">
-                                <h3 class="fw-bold text-secondary m-0" style="font-size: 1.25rem;">{{ number_format($rekap['jumlah_logs']) }}</h3>
+                            <div class="text-center w-33" style="cursor: pointer;" onclick="window.location.href='{{ route('admin.audit-logs.index', ['bulan' => $rekap['bulan_angka'], 'tahun' => $rekap['tahun']]) }}'" title="Klik untuk lihat detail logs">
+                                <h3 class="fw-bold text-secondary m-0 text-decoration-underline" style="font-size: 1.25rem;">{{ number_format($rekap['jumlah_logs']) }}</h3>
                                 <small class="text-muted" style="font-size: 10px;">Audit Logs</small>
                             </div>
                         </div>

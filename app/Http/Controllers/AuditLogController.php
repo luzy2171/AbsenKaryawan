@@ -30,8 +30,24 @@ class AuditLogController extends Controller
             $query->byUser($request->user_id);
         }
 
-        // Filter by date range
-        if ($request->filled('start_date') && $request->filled('end_date')) {
+        // Support for month/year filter from Maintenance DB shortcut
+        if ($request->filled('bulan') && $request->filled('tahun')) {
+            $bulan = $request->bulan;
+            $tahun = $request->tahun;
+            
+            $start = Carbon::create($tahun, $bulan, 1)->startOfMonth()->startOfDay();
+            $end = Carbon::create($tahun, $bulan, 1)->endOfMonth()->endOfDay();
+            
+            $query->whereBetween('created_at', [$start, $end]);
+            
+            // Atur input start_date dan end_date untuk mengisi nilai di filter UI
+            $request->merge([
+                'start_date' => $start->toDateString(),
+                'end_date' => $end->toDateString()
+            ]);
+        }
+        // Filter by date range (Normal filter UI)
+        elseif ($request->filled('start_date') && $request->filled('end_date')) {
             $query->inDateRange($request->start_date, $request->end_date);
         }
 
