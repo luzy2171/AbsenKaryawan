@@ -9,6 +9,7 @@ use App\Http\Controllers\KaryawanController;
 use App\Http\Controllers\PengaturanController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\Admin\DatabaseMaintenanceController;
 
 /*
 |--------------------------------------------------------------------------
@@ -79,6 +80,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/store', [UserController::class, 'store'])->name('store');
         Route::post('/update/{id}', [UserController::class, 'update'])->name('update');
         Route::delete('/{id}', [UserController::class, 'destroy'])->name('destroy');
+    });
+
+    // ===== MANAJEMEN DATABASE (Khusus Superadmin) =====
+    Route::prefix('admin/maintenance')->name('admin.maintenance.')->middleware('superadmin')->group(function () {
+        Route::get('/', [DatabaseMaintenanceController::class, 'index'])->name('index');
+        Route::post('/purge', [DatabaseMaintenanceController::class, 'purgeData'])->name('purge');
     });
 
     // ===== AUDIT LOGS (Khusus Superadmin) =====
