@@ -356,9 +356,9 @@
                                 <hr class="dropdown-divider">
                                 <div class="d-flex flex-column gap-1">
                                     @foreach($karyawans as $k)
-                                        <div class="form-check py-1 hover-bg-light rounded px-2 m-0" style="padding-left: 1.5em !important;">
-                                            <input class="form-check-input karyawan-check" style="margin-left: -1.5em;" type="checkbox" name="karyawan_id[]" value="{{ $k->id }}" id="karyawan_{{ $k->id }}" data-id="{{ $k->id }}" data-nama="{{ $k->nama }}" data-kode="{{ $k->id_karyawan }}" onchange="updateKaryawanDropdown()">
-                                            <label class="form-check-label cursor-pointer w-100 ms-1 d-block" for="karyawan_{{ $k->id }}">
+                                        <div class="form-check py-1 hover-bg-light rounded px-2 m-0 d-flex align-items-center" style="padding-left: 0.5rem !important;">
+                                            <input class="form-check-input karyawan-check m-0 me-2" type="checkbox" name="karyawan_id[]" value="{{ $k->id }}" id="karyawan_{{ $k->id }}" data-id="{{ $k->id }}" data-nama="{{ $k->nama }}" data-kode="{{ $k->id_karyawan }}" onchange="updateKaryawanDropdown()">
+                                            <label class="form-check-label cursor-pointer w-100 m-0 p-0 text-truncate" for="karyawan_{{ $k->id }}" style="line-height: 1.2;">
                                                 {{ $k->nama }} <span class="text-muted small ms-1">({{ $k->id_karyawan }})</span>
                                             </label>
                                         </div>
