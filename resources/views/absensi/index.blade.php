@@ -336,20 +336,40 @@
             <div class="card-custom p-4 bg-white mb-4 fade-in">
                 <h5 class="fw-bold mb-3"><i class="bi bi-printer me-2 text-primary"></i>Cetak Laporan</h5>
                 <form action="{{ route('absensi.cetak') }}" method="GET" target="_blank" id="formLaporan" class="row g-3">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label class="form-label fw-semibold small">
-                            <i class="bi bi-person-badge text-muted me-1"></i>Pilih Karyawan
+                            <i class="bi bi-person-badge text-muted me-1"></i>Karyawan
                         </label>
-                        <select name="karyawan_id" class="form-select">
-                            <option value="semua">Semua Karyawan</option>
-                            @foreach($karyawans as $k)
-                                <option value="{{ $k->id }}">[{{ $k->id_karyawan }}] {{ $k->nama }}</option>
-                            @endforeach
-                        </select>
+                        <input type="hidden" name="karyawan_id" id="karyawanIdsInput" value="">
+                        <div id="selectedKaryawanTags" class="mt-1 d-flex flex-wrap gap-1"></div>
+                        <div class="dropdown w-100">
+                            <button class="btn btn-outline-secondary w-100 text-start dropdown-toggle" type="button" id="karyawanDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
+                                <span id="karyawanDropdownLabel">Pilih Karyawan</span>
+                            </button>
+                            <div class="dropdown-menu w-100 p-2 shadow" style="max-height: 300px; overflow-y: auto;" aria-labelledby="karyawanDropdown">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="checkAllKaryawan" value="semua" onchange="toggleSemua(this)">
+                                    <label class="form-check-label fw-semibold cursor-pointer w-100" for="checkAllKaryawan">
+                                        <i class="bi bi-check-all me-1"></i>Semua Karyawan
+                                    </label>
+                                </div>
+                                <hr class="dropdown-divider">
+                                <div class="d-flex flex-column gap-1">
+                                    @foreach($karyawans as $k)
+                                        <div class="form-check py-1 hover-bg-light rounded px-2 m-0" style="padding-left: 1.5em !important;">
+                                            <input class="form-check-input karyawan-check" style="margin-left: -1.5em;" type="checkbox" name="karyawan_id[]" value="{{ $k->id }}" id="karyawan_{{ $k->id }}" data-id="{{ $k->id }}" data-nama="{{ $k->nama }}" data-kode="{{ $k->id_karyawan }}" onchange="updateKaryawanDropdown()">
+                                            <label class="form-check-label cursor-pointer w-100 ms-1 d-block" for="karyawan_{{ $k->id }}">
+                                                {{ $k->nama }} <span class="text-muted small ms-1">({{ $k->id_karyawan }})</span>
+                                            </label>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold small">
-                            <i class="bi bi-calendar-range text-muted me-1"></i>Dari Tanggal
+                            <i class="bi bi-calendar text-muted me-1"></i>Dari Tanggal
                         </label>
                         <input type="date" name="tanggal_mulai" class="form-control" value="{{ date('Y-m-01') }}" required>
                     </div>
@@ -359,7 +379,7 @@
                         </label>
                         <input type="date" name="tanggal_selesai" class="form-control" value="{{ date('Y-m-t') }}" required>
                     </div>
-                    <div class="col-md-3 d-flex align-items-end gap-2">
+                    <div class="col-md-2 d-flex align-items-end gap-2">
                         <button type="button" onclick="submitAction('{{ route('absensi.cetak') }}', '_blank')" class="btn btn-outline-success w-50">
                             <i class="bi bi-printer me-1"></i> PDF
                         </button>

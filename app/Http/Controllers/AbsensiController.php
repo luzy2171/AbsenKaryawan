@@ -199,19 +199,17 @@ class AbsensiController extends Controller
         $request->validate([
             'tanggal_mulai'   => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'karyawan_id'     => 'nullable'
+            'karyawan_id'     => 'nullable|string'
         ]);
 
         $mulai      = $request->tanggal_mulai;
         $selesai    = $request->tanggal_selesai;
-        $karyawanId = $request->karyawan_id;
+        $karyawanIds = $request->karyawan_id ? explode(',', $request->karyawan_id) : [];
 
-        // Membangun query dasar log absensi dalam rentang tanggal
         $query = Attendance::with('karyawan')->whereBetween('tanggal', [$mulai, $selesai]);
 
-        // Saring query jika admin memilih karyawan tertentu dari dropdown select
-        if ($karyawanId && $karyawanId !== 'semua') {
-            $query->where('karyawan_id', $karyawanId);
+        if (!empty($karyawanIds) && !in_array('semua', $karyawanIds)) {
+            $query->whereIn('karyawan_id', $karyawanIds);
         }
 
         $attendancesRaw = $query->get();
@@ -282,7 +280,7 @@ class AbsensiController extends Controller
         // Log audit
         AuditLogger::absensiExported('PDF', count($cleanedAttendances));
 
-        return view('absensi.cetak', compact('cleanedAttendances', 'mulai', 'selesai'));
+        return view('absensi.cetak', compact('cleanedAttendances', 'mulai', 'selesai', 'karyawanIds'));
     }
 
     /**
@@ -294,17 +292,17 @@ class AbsensiController extends Controller
         $request->validate([
             'tanggal_mulai'   => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'karyawan_id'     => 'nullable'
+            'karyawan_id'     => 'nullable|string'
         ]);
 
         $mulai      = $request->tanggal_mulai;
         $selesai    = $request->tanggal_selesai;
-        $karyawanId = $request->karyawan_id;
+        $karyawanIds = $request->karyawan_id ? explode(',', $request->karyawan_id) : [];
 
         $query = Attendance::with('karyawan')->whereBetween('tanggal', [$mulai, $selesai]);
 
-        if ($karyawanId && $karyawanId !== 'semua') {
-            $query->where('karyawan_id', $karyawanId);
+        if (!empty($karyawanIds) && !in_array('semua', $karyawanIds)) {
+            $query->whereIn('karyawan_id', $karyawanIds);
         }
 
         $attendancesRaw = $query->get();
@@ -392,7 +390,7 @@ class AbsensiController extends Controller
                     <td colspan="8" class="title">PT.BEJO BERKAH MAKMUR</td>
                 </tr>
                 <tr>
-                    <td colspan="8" class="subtitle">LAPORAN DETAIL ABSENSI KARYAWAN | Periode: ' . date('d/m/Y', strtotime($mulai)) . ' s.d ' . date('d/m/Y', strtotime($selesai)) . '</td>
+                    <td colspan="8" class="subtitle">LAPORAN DETAIL ABSENSI KARYAWAN | Periode: ' . date('d/m/Y', strtotime($mulai)) . ' s.d ' . date('d/m/Y', strtotime($selesai)) . ' | ' . (in_array('semua', (array)$karyawanIds) || empty($karyawanIds) ? 'Semua Karyawan' : implode(', ', \App\Models\Karyawan::whereIn('id', (array)$karyawanIds)->pluck('nama')->toArray())) . '</td>
                 </tr>
                 <tr><td colspan="8"></td></tr>
                 <tr class="header-table">
