@@ -266,10 +266,10 @@
                             @csrf
 
                             <div class="setting-item">
-                                <label class="form-label fw-bold mb-3">
+                                <label class="form-label fw-bold mb-3" for="jam_masuk">
                                     <i class="bi bi-box-arrow-in-right text-success me-2"></i>Jam Masuk Kerja
                                 </label>
-                                <input type="time" name="jam_masuk"
+                                <input type="time" name="jam_masuk" id="jam_masuk"
                                        value="{{ $settings['jam_masuk'] ?? '08:00' }}"
                                        class="form-control" required>
                                 <small class="text-muted mt-2 d-block">
@@ -278,23 +278,35 @@
                             </div>
 
                             <div class="setting-item">
-                                <label class="form-label fw-bold mb-3">
+                                <label class="form-label fw-bold mb-3" for="jam_pulang">
                                     <i class="bi bi-box-arrow-right text-danger me-2"></i>Jam Pulang Kerja
                                 </label>
-                                <input type="time" name="jam_pulang"
+                                <input type="time" name="jam_pulang" id="jam_pulang"
                                        value="{{ $settings['jam_pulang'] ?? '17:00' }}"
                                        class="form-control" required>
                                 <small class="text-muted mt-2 d-block">
                                     <i class="bi bi-info-circle me-1"></i>Waktu standar karyawan selesai bekerja
                                 </small>
                             </div>
+                            
+                            <div class="setting-item">
+                                <label class="form-label fw-bold mb-3" for="jam_lembur_mulai">
+                                    <i class="bi bi-clock-fill text-purple me-2"></i>Jam Mulang Lembur
+                                </label>
+                                <input type="time" name="jam_lembur_mulai" id="jam_lembur_mulai"
+                                       value="{{ $settings['jam_lembur_mulai'] ?? '17:00' }}"
+                                       class="form-control" required>
+                                <small class="text-muted mt-2 d-block">
+                                    <i class="bi bi-info-circle me-1"></i>Batas waktu awal dihitungnya lembur
+                                </small>
+                            </div>
 
                             <div class="setting-item">
-                                <label class="form-label fw-bold mb-3">
+                                <label class="form-label fw-bold mb-3" for="toleransi_terlambat">
                                     <i class="bi bi-hourglass-split text-warning me-2"></i>Toleransi Keterlambatan
                                 </label>
                                 <div class="input-group">
-                                    <input type="number" name="toleransi_terlambat"
+                                    <input type="number" name="toleransi_terlambat" id="toleransi_terlambat"
                                            value="{{ $settings['toleransi_terlambat'] ?? '15' }}"
                                            class="form-control text-center fs-4 fw-bold" min="0" required>
                                     <span class="input-group-text text-muted fw-semibold">Menit</span>
@@ -305,10 +317,10 @@
                             </div>
 
                             <div class="setting-item">
-                                <label class="form-label fw-bold mb-3">
+                                <label class="form-label fw-bold mb-3" for="auto_pull_interval">
                                     <i class="bi bi-arrow-repeat text-info me-2"></i>Interval Auto-Pull
                                 </label>
-                                <select name="auto_pull_interval" class="form-select">
+                                <select name="auto_pull_interval" id="auto_pull_interval" class="form-select">
                                     <option value="1" {{ ($settings['auto_pull_interval'] ?? '24') == '1' ? 'selected' : '' }}>Setiap 1 Jam</option>
                                     <option value="2" {{ ($settings['auto_pull_interval'] ?? '24') == '2' ? 'selected' : '' }}>Setiap 2 Jam</option>
                                     <option value="4" {{ ($settings['auto_pull_interval'] ?? '24') == '4' ? 'selected' : '' }}>Setiap 4 Jam</option>
