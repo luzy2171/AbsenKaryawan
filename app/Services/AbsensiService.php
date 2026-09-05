@@ -76,7 +76,12 @@ class AbsensiService
             $pin  = $this->parseData($data, "<PIN>", "</PIN>");
             $name = $this->parseData($data, "<Name>", "</Name>");
 
-            $users[] = (object) ['user_id' => $pin, 'pin' => $pin, 'name' => $name];
+            $users[] = [
+                'user_id'   => $pin,
+                'pin'       => $pin,
+                'name'      => $name,
+                'privilege' => $this->parseData($data, "<Privilege>", "</Privilege>")
+            ];
         }
         return $users;
     }
@@ -90,7 +95,7 @@ class AbsensiService
         $users = $this->getAllUsers();
         $userList = [];
         foreach ($users as $u) {
-            $userList[$u->user_id] = $u->name;
+            $userList[$u['user_id']] = $u['name'];
         }
 
         $soap = '<?xml version="1.0"?><GetAttLog><ArgComKey>'.$this->key.'</ArgComKey><Arg><PIN>All</PIN></Arg></GetAttLog>';
@@ -111,12 +116,13 @@ class AbsensiService
             $datePart = strlen($dateTime) >= 10 ? substr($dateTime, 0, 10) : ($dateTime ?: '-');
             $timePart = strlen($dateTime) >= 12 ? substr($dateTime, 11) : '-';
 
-            $logs[] = (object) [
+            $logs[] = [
                 'pin'     => $pin,
                 'name'    => $userList[$pin] ?? '-',
                 'nama'    => $userList[$pin] ?? '-',
                 'tanggal' => $datePart,
                 'waktu'   => $timePart,
+                'datetime'=> $dateTime,
                 'date'    => $datePart,
                 'time'    => $timePart,
                 'verify'  => $this->parseData($data, "<Verified>", "</Verified>"),
@@ -217,15 +223,17 @@ class AbsensiService
             $data = $this->parseData($row, "<Row>", "</Row>");
             if (trim($data) == "") continue;
 
-            $templates[] = (object) [
+            $templates[] = [
                 'user_id'  => $this->parseData($data, "<PIN>", "</PIN>"),
                 'pin'      => $this->parseData($data, "<PIN>", "</PIN>"),
                 'finger_id'=> $this->parseData($data, "<FingerID>", "</FingerID>"),
                 'size'     => $this->parseData($data, "<Size>", "</Size>"),
                 'valid'    => $this->parseData($data, "<Valid>", "</Valid>"),
-                'template' => $this->parseData($data, "<Template>", "</Template>"),
+                'template' => $this->parseData($data, "<Template>", "</Template>")
             ];
         }
+        return $templates;
+    }
         return $templates;
     }
 
