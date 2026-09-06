@@ -15,7 +15,7 @@ class LeaveController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Leave::with(['karyawan', 'approver', 'leaveApprovals'])->orderBy('created_at', 'desc');
+        $query = Leave::with(['karyawan', 'approver', 'leaveApprovals.user'])->orderBy('created_at', 'desc');
 
         if ($request->filled('search')) {
             $search = $request->search;

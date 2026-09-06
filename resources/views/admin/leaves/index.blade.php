@@ -216,7 +216,12 @@
                                             <i class="bi bi-check-circle-fill me-1"></i> Disetujui
                                         </span>
                                         <div class="small text-muted mt-1" style="font-size: 10px;">
-                                            Oleh: {{ $leave->approver->name ?? 'Sistem' }}
+                                            Oleh: 
+                                            @if($leave->leaveApprovals->count() > 0)
+                                                {{ $leave->leaveApprovals->map(function($approval) { return $approval->user->name ?? 'Unknown'; })->join(', ') }}
+                                            @else
+                                                {{ $leave->approver->name ?? 'Sistem' }}
+                                            @endif
                                         </div>
                                     @else
                                         @php
