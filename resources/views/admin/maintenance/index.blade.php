@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Maintenance Database - Absensi-BBM</title>
+    <link rel="icon" href="{{ asset('favicon.ico') }}" type="image/x-icon">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -120,30 +122,39 @@
 
             <!-- STATISTIK DB -->
             <div class="row g-3 mb-4 fade-in">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="card-custom bg-white p-3 d-flex align-items-center">
                         <div class="stat-icon bg-primary-subtle text-primary me-3 fs-3"><i class="bi bi-database"></i></div>
                         <div>
                             <h4 class="fw-bold m-0">{{ number_format($totalAbsensiDB) }}</h4>
-                            <small class="text-muted">Total Baris Absensi di DB</small>
+                            <small class="text-muted">Total Absensi</small>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <div class="card-custom bg-white p-3 d-flex align-items-center">
                         <div class="stat-icon bg-info-subtle text-info me-3 fs-3"><i class="bi bi-clock-history"></i></div>
                         <div>
                             <h4 class="fw-bold m-0">{{ number_format($totalLemburDB) }}</h4>
-                            <small class="text-muted">Total Baris Lembur di DB</small>
+                            <small class="text-muted">Total Lembur</small>
                         </div>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
+                    <div class="card-custom bg-white p-3 d-flex align-items-center">
+                        <div class="stat-icon bg-success-subtle text-success me-3 fs-3"><i class="bi bi-journal-text"></i></div>
+                        <div>
+                            <h4 class="fw-bold m-0">{{ number_format($totalLogsDB) }}</h4>
+                            <small class="text-muted">Total Log Audit</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
                     <div class="card-custom bg-white p-3 d-flex align-items-center">
                         <div class="stat-icon bg-warning-subtle text-warning me-3 fs-3"><i class="bi bi-hdd"></i></div>
                         <div>
                             <h4 class="fw-bold m-0">{{ $dbSizeMB }} MB</h4>
-                            <small class="text-muted">Estimasi Ukuran Tabel</small>
+                            <small class="text-muted">Size Tabel</small>
                         </div>
                     </div>
                 </div>
@@ -174,26 +185,30 @@
                     <div class="card-custom p-4 bg-white month-card {{ $rekap['jumlah_absensi'] == 0 ? 'empty-data' : '' }}">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <h5 class="fw-bold text-dark m-0">{{ $rekap['bulan_nama'] }} <span class="text-muted">{{ $rekap['tahun'] }}</span></h5>
-                            @if($rekap['jumlah_absensi'] > 0)
+                            @if($rekap['jumlah_absensi'] > 0 || $rekap['jumlah_lembur'] > 0 || $rekap['jumlah_logs'] > 0)
                                 <span class="badge bg-success-subtle text-success"><i class="bi bi-hdd-fill me-1"></i>Ada Data</span>
                             @else
                                 <span class="badge bg-light text-muted">Kosong</span>
                             @endif
                         </div>
                         
-                        <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
-                            <div class="text-center w-50 border-end">
-                                <h3 class="fw-bold text-primary m-0">{{ number_format($rekap['jumlah_absensi']) }}</h3>
-                                <small class="text-muted" style="font-size: 11px;">Record Absen</small>
+                        <div class="row text-center mb-3 border-bottom pb-2 g-0">
+                            <div class="col-4 border-end">
+                                <h4 class="fw-bold text-primary m-0">{{ number_format($rekap['jumlah_absensi']) }}</h4>
+                                <small class="text-muted" style="font-size: 10px;">Absensi</small>
                             </div>
-                            <div class="text-center w-50">
-                                <h3 class="fw-bold text-info m-0">{{ number_format($rekap['jumlah_lembur']) }}</h3>
-                                <small class="text-muted" style="font-size: 11px;">Record Lembur</small>
+                            <div class="col-4 border-end">
+                                <h4 class="fw-bold text-info m-0">{{ number_format($rekap['jumlah_lembur']) }}</h4>
+                                <small class="text-muted" style="font-size: 10px;">Lembur</small>
+                            </div>
+                            <div class="col-4">
+                                <h4 class="fw-bold text-success m-0">{{ number_format($rekap['jumlah_logs']) }}</h4>
+                                <small class="text-muted" style="font-size: 10px;">Log Audit</small>
                             </div>
                         </div>
 
-                        @if($rekap['jumlah_absensi'] > 0)
-                            <button type="button" class="btn btn-outline-danger w-100" onclick="showPurgeModal('{{ $rekap['bulan_angka'] }}', '{{ $rekap['bulan_nama'] }}', '{{ $rekap['tahun'] }}', '{{ $rekap['jumlah_absensi'] }}')">
+                        @if($rekap['jumlah_absensi'] > 0 || $rekap['jumlah_lembur'] > 0 || $rekap['jumlah_logs'] > 0)
+                            <button type="button" class="btn btn-outline-danger w-100" onclick="showPurgeModal('{{ $rekap['bulan_angka'] }}', '{{ $rekap['bulan_nama'] }}', '{{ $rekap['tahun'] }}', '{{ $rekap['jumlah_absensi'] }} Absensi, {{ $rekap['jumlah_lembur'] }} Lembur, {{ $rekap['jumlah_logs'] }} Log')">
                                 <i class="bi bi-trash3 me-1"></i> Kosongkan Bulan Ini
                             </button>
                         @else
