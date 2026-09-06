@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Karyawan;
-use App\Services\AbsensiService;
+use App\Services\HikvisionService;
 use App\Helpers\AuditLogger;
 
 class KaryawanController extends Controller
@@ -21,7 +21,7 @@ class KaryawanController extends Controller
     /**
      * Menyimpan karyawan baru ke Database Web dan Mesin Absensi Fisik
      */
-    public function store(Request $request, AbsensiService $absensiService)
+    public function store(Request $request, HikvisionService $absensiService)
     {
         if (!auth()->user()->canEdit()) {
             abort(403, 'Akses ditolak. Role Anda tidak dapat menambah karyawan.');
@@ -54,7 +54,7 @@ class KaryawanController extends Controller
     /**
      * FITUR BARU: Sinkronisasi Otomatis Semua User dari Perangkat ke Database Web
      */
-    public function syncDariMesin(AbsensiService $absensiService)
+    public function syncDariMesin(HikvisionService $absensiService)
     {
         // Track waktu mulai untuk response time
         $startTime = microtime(true);
@@ -106,7 +106,7 @@ class KaryawanController extends Controller
     /**
      * Menghapus karyawan dari Web dan Mesin Absensi Fisik
      */
-    public function destroy($id, AbsensiService $absensiService)
+    public function destroy($id, HikvisionService $absensiService)
     {
         if (!auth()->user()->isTrueApprover()) {
             abort(403, 'Akses ditolak. Hanya Approver dan Superadmin yang dapat menghapus karyawan.');

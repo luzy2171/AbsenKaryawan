@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Karyawan;
 use App\Models\Attendance;
 use App\Models\Lembur;
-use App\Services\AbsensiService;
+use App\Services\HikvisionService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -98,7 +98,7 @@ class AbsensiController extends Controller
     /**
      * PERBAIKAN LOGIKA: Memproses Penarikan Data Log Mesin Berdasarkan Pengaturan Jam Kerja Dinamis (ANTI-DUPLIKASI)
      */
-    public function tarikDataDariMesin(AbsensiService $absensiService)
+    public function tarikDataDariMesin(HikvisionService $absensiService)
     {
         // Track waktu mulai untuk response time
         $startTime = microtime(true);

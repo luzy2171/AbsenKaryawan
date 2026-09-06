@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Services\AbsensiService;
+use App\Services\HikvisionService;
 use App\Helpers\AuditLogger;
 use App\Models\MachineStatus;
 
@@ -12,7 +12,7 @@ class PengaturanController extends Controller
     /**
      * Mengakses Halaman Dashboard Menu Pengaturan Alat
      */
-    public function index(AbsensiService $absensiService, Request $request)
+    public function index(HikvisionService $absensiService, Request $request)
     {
         // Ambil semua machine status
         $machineStatuses = MachineStatus::all();
@@ -168,7 +168,7 @@ class PengaturanController extends Controller
     /**
      * Fitur 4: Proses Kosongkan Log Transaksi Mesin Absensi
      */
-    public function clearMachineLogs(AbsensiService $absensiService)
+    public function clearMachineLogs(HikvisionService $absensiService)
     {
         $result = $absensiService->clearLogData();
 
@@ -185,7 +185,7 @@ class PengaturanController extends Controller
     /**
      * Fitur 5: Proses Hapus User Langsung dari Menu Pengaturan
      */
-    public function hapusUserDariMesin(Request $request, AbsensiService $absensiService)
+    public function hapusUserDariMesin(Request $request, HikvisionService $absensiService)
     {
         $request->validate([
             'user_id' => 'required'
@@ -206,7 +206,7 @@ class PengaturanController extends Controller
     /**
      * Fitur 6: Memproses Sinkronisasi Waktu Server ke Perangkat Absensi Fisik
      */
-    public function synchronizeDeviceTime(AbsensiService $absensiService)
+    public function synchronizeDeviceTime(HikvisionService $absensiService)
     {
         $result = $absensiService->syncTime();
 
@@ -223,7 +223,7 @@ class PengaturanController extends Controller
     /**
      * Fitur 7: Memproses Perintah Restart Mesin Absensi Fisik
      */
-    public function restartMachine(AbsensiService $absensiService)
+    public function restartMachine(HikvisionService $absensiService)
     {
         $result = $absensiService->restartDevice();
 
@@ -240,7 +240,7 @@ class PengaturanController extends Controller
     /**
      * Fitur 8: Memproses Upload Template Sidik Jari secara Manual via Pengaturan
      */
-    public function uploadSidikJariManual(Request $request, AbsensiService $absensiService)
+    public function uploadSidikJariManual(Request $request, HikvisionService $absensiService)
     {
         $request->validate([
             'user_id' => 'required',
@@ -265,7 +265,7 @@ class PengaturanController extends Controller
     /**
      * Fitur 9: Memproses Hapus Template Sidik Jari secara Manual via Pengaturan
      */
-    public function hapusSidikJariManual(Request $request, AbsensiService $absensiService)
+    public function hapusSidikJariManual(Request $request, HikvisionService $absensiService)
     {
         $request->validate([
             'user_id' => 'required',
