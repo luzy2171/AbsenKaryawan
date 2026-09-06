@@ -29,36 +29,78 @@
                 <div><h5 class="fw-bold m-0 text-success" style="font-size: 18px;">Absensi-BBM</h5><small class="text-muted" style="font-size: 10px;">Attendance System</small></div>
             </div>
             <ul class="nav flex-column">
-                <li class="nav-item"><a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ url('/dashboard') }}"><i class="bi bi-grid me-2"></i> Dashboard</a></li>
-                <li class="nav-item"><a class="nav-link {{ request()->is('karyawan*') ? 'active' : '' }}" href="{{ url('/karyawan') }}"><i class="bi bi-people me-2"></i> Karyawan</a></li>
-                <li class="nav-item"><a class="nav-link {{ request()->is('absensi*') ? 'active' : '' }}" href="{{ url('/absensi') }}"><i class="bi bi-calendar-check me-2"></i> Absensi</a></li>
-                
-@if(auth()->user()->isApprover())
-                 <li class="nav-item mt-3"><small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small></li>
-                                <li class="nav-item">
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}"
+                            href="{{ url('/dashboard') }}">
+                            <i class="bi bi-grid me-2"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->is('karyawan*') ? 'active' : '' }}"
+                            href="{{ url('/karyawan') }}">
+                            <i class="bi bi-people me-2"></i> Karyawan
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->is('absensi*') ? 'active' : '' }}"
+                            href="{{ url('/absensi') }}">
+                            <i class="bi bi-calendar-check me-2"></i> Absensi
+                        </a>
+                    </li>
+                    @if(auth()->user()->isApprover())
+                        <li class="nav-item mt-3">
+                            <small class="text-muted px-3 fw-semibold"
+                                style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small>
+                        </li>
+                                        <li class="nav-item">
                     <a class="nav-link {{ request()->is('admin/leaves*') ? 'active' : '' }}" href="{{ route('admin.leaves.index') }}">
                         <i class="bi bi-envelope-paper me-2"></i> Izin & Cuti
                     </a>
                 </li>
                 @if(auth()->user()->isSuperadmin())
-@if(auth()->user()->isTrueApprover())
-<li class="nav-item"><a class="nav-link" href="{{ url('/admin/settings') }}"><i class="bi bi-clock-history me-2"></i> Set Jam Kerja</a></li>
-                @if(auth()->user()->isTrueApprover())
-                <li class="nav-item"><a class="nav-link" href="{{ url('/pengaturan') }}"><i class="bi bi-gear me-2"></i> Kontrol Mesin</a></li>
-                @if(auth()->user()->isTrueApprover())
-                <li class="nav-item"><a class="nav-link active" href="{{ route('admin.maintenance.index') }}"><i class="bi bi-database-fill-gear me-2"></i> Maintenance DB</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ url('/admin/users') }}"><i class="bi bi-person-gear me-2"></i> Manajemen User</a></li>
-                @endif
-                @endif
-@if(auth()->user()->isTrueApprover())
-                <li class="nav-item"><a class="nav-link" href="{{ url('/admin/audit-logs') }}"><i class="bi bi-journal-text me-2"></i> Audit Logs</a></li>
-                @endif
-                @endif
-                
-                <li class="nav-item mt-auto pt-3 border-top">
-                    <form action="{{ route('logout') }}" method="POST">@csrf<button type="submit" class="nav-link text-danger w-100 text-start border-0 bg-transparent"><i class="bi bi-box-arrow-left me-2"></i> Keluar</button></form>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}"
+                                href="{{ url('/admin/settings') }}">
+                                <i class="bi bi-clock-history me-2"></i> Set Jam Kerja
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->is('pengaturan*') ? 'active' : '' }}"
+                                href="{{ url('/pengaturan') }}">
+                                <i class="bi bi-gear me-2"></i> Kontrol Mesin
+                            </a>
+                        </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('admin/maintenance*') ? 'active' : '' }}" href="{{ route('admin.maintenance.index') }}">
+                        <i class="bi bi-database-fill-gear me-2"></i> Maintenance DB
+                    </a>
                 </li>
-            </ul>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->is('admin/users*') ? 'active' : '' }}"
+                                href="{{ url('/admin/users') }}">
+                                <i class="bi bi-person-gear me-2"></i> Manajemen User
+                            </a>
+                        </li>
+                        @endif
+@if(auth()->user()->isTrueApprover())
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->is('admin/audit-logs*') ? 'active' : '' }}"
+                                href="{{ url('/admin/audit-logs') }}">
+                                <i class="bi bi-journal-text me-2"></i> Audit Logs
+                            </a>
+                        </li>
+                        @endif
+
+                    @endif
+                    <li class="nav-item mt-auto pt-3 border-top">
+                        <form action="{{ route('logout') }}" method="POST">
+                            @csrf
+                            <button type="submit" class="nav-link text-danger w-100 text-start border-0 bg-transparent">
+                                <i class="bi bi-box-arrow-left me-2"></i> Keluar
+                            </button>
+                        </form>
+                    </li>
+                </ul>
         </div>
 
         <div class="col-md-10 p-4">

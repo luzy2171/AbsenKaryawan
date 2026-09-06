@@ -48,6 +48,7 @@ Route::middleware('auth')->group(function () {
     Route::middleware('true_approver')->group(function () {
         Route::put('admin/leaves/{id}/approve', [LeaveController::class, 'approve'])->name('admin.leaves.approve');
         Route::delete('admin/leaves/{id}', [LeaveController::class, 'destroy'])->name('admin.leaves.destroy');
+        Route::delete('/karyawan/{id}', [KaryawanController::class, 'destroy'])->name('karyawan.destroy');
         Route::get('admin/audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
         Route::get('admin/audit-logs/export', [AuditLogController::class, 'export'])->name('admin.audit-logs.export');
         Route::get('admin/audit-logs/{id}', [AuditLogController::class, 'show'])->name('admin.audit-logs.show');
@@ -62,7 +63,6 @@ Route::middleware('auth')->group(function () {
         Route::post('/absensi/lembur', [AbsensiController::class, 'storeLembur'])->name('absensi.lembur.store');
         Route::delete('/absensi/lembur/{id}', [AbsensiController::class, 'destroyLembur'])->name('absensi.lembur.destroy');
         Route::post('/karyawan/store', [KaryawanController::class, 'store'])->name('karyawan.store');
-        Route::delete('/karyawan/{id}', [KaryawanController::class, 'destroy'])->name('karyawan.destroy');
         Route::post('/karyawan/sync-mesin', [KaryawanController::class, 'syncDariMesin'])->name('karyawan.sync-mesin');
         Route::post('admin/leaves', [LeaveController::class, 'store'])->name('admin.leaves.store');
     });

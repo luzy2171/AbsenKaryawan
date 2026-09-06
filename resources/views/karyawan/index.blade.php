@@ -208,6 +208,7 @@
                                     </span>
                                 </td>
                                 <td class="text-center">
+                                    @if(auth()->user()->isTrueApprover())
                                     <form action="{{ route('karyawan.destroy', $k->id) }}" method="POST" onsubmit="return confirm('Apakah Anda yakin ingin menghapus karyawan ini dari sistem dan mesin fisik?');" class="d-inline">
                                         @csrf
                                         @method('DELETE')
@@ -215,6 +216,9 @@
                                             <i class="bi bi-trash3"></i>
                                         </button>
                                     </form>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
                                 </td>
                             </tr>
                             @empty

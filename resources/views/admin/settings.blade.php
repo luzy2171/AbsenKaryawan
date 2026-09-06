@@ -166,6 +166,18 @@
                             </div>
 
                             <div class="setting-item">
+                                <label class="form-label fw-bold mb-3" for="required_approvals">
+                                    <i class="bi bi-person-check-fill text-primary me-2"></i>Minimal Jumlah Approval Cuti
+                                </label>
+                                <input type="number" name="required_approvals" id="required_approvals"
+                                       value="{{ $settings['required_approvals'] ?? '1' }}" min="1" max="10"
+                                       class="form-control" required>
+                                <small class="text-muted mt-2 d-block">
+                                    <i class="bi bi-info-circle me-1"></i>Jumlah minimal orang yang harus menyetujui pengajuan izin/cuti
+                                </small>
+                            </div>
+
+                            <div class="setting-item">
                                 <label class="form-label fw-bold mb-3" for="toleransi_terlambat">
                                     <i class="bi bi-hourglass-split text-warning me-2"></i>Toleransi Keterlambatan
                                 </label>

@@ -217,8 +217,14 @@
                                             Oleh: {{ $leave->approver->name ?? 'Sistem' }}
                                         </div>
                                     @else
+                                        @php
+                                            $currentCount = $leave->leaveApprovals->count();
+                                        @endphp
                                         <span class="badge bg-warning-subtle text-warning px-3 py-2" style="font-size: 12px;">
-                                            <i class="bi bi-hourglass-split me-1"></i> Menunggu Approval
+                                            <i class="bi bi-hourglass-split me-1"></i> Menunggu Approval 
+                                            @if($requiredApprovals > 1)
+                                                ({{ $currentCount }}/{{ $requiredApprovals }})
+                                            @endif
                                         </span>
                                     @endif
                                 </td>
@@ -241,6 +247,10 @@
                                 </td>
                                 <td class="text-end">
                                     @if($leave->status === 'Menunggu' && auth()->user()->isTrueApprover())
+                                        @php
+                                            $hasApproved = $leave->leaveApprovals->where('user_id', auth()->id())->isNotEmpty();
+                                        @endphp
+                                        @if(!$hasApproved)
                                         <form action="{{ route('admin.leaves.approve', $leave->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin akan menyetujui pengajuan ini?');">
                                             @csrf
                                             @method('PUT')
@@ -248,6 +258,11 @@
                                                 <i class="bi bi-check-circle"></i> Setuju
                                             </button>
                                         </form>
+                                        @else
+                                        <span class="badge bg-success-subtle text-success me-1" title="Anda sudah menyetujui">
+                                            <i class="bi bi-check-all"></i> Disetujui Anda
+                                        </span>
+                                        @endif
                                     @endif
                                     @if(auth()->user()->isTrueApprover())
                                     <form action="{{ route('admin.leaves.destroy', $leave->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus data pengajuan ini? Ini juga akan menghapus cap absensi Izin/Cuti/Sakit untuk tanggal tersebut di Laporan Absensi.');">

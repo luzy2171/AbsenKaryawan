@@ -15,7 +15,7 @@ class LeaveController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Leave::with(['karyawan', 'approver'])->orderBy('created_at', 'desc');
+        $query = Leave::with(['karyawan', 'approver', 'leaveApprovals'])->orderBy('created_at', 'desc');
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -36,8 +36,9 @@ class LeaveController extends Controller
 
         $leaves = $query->paginate(15);
         $karyawans = Karyawan::where('status', 'Aktif')->orderBy('nama')->get();
+        $requiredApprovals = \Illuminate\Support\Facades\DB::table('settings')->where('key', 'required_approvals')->value('value') ?? 1;
 
-        return view('admin.leaves.index', compact('leaves', 'karyawans'));
+        return view('admin.leaves.index', compact('leaves', 'karyawans', 'requiredApprovals'));
     }
 
     public function store(Request $request)
@@ -149,26 +150,50 @@ class LeaveController extends Controller
         $leave = Leave::findOrFail($id);
 
         if ($leave->status === 'Disetujui') {
-            return redirect()->back()->with('error', 'Pengajuan ini sudah disetujui.');
+            return redirect()->back()->with('error', 'Pengajuan ini sudah disetujui sepenuhnya.');
         }
 
-        $leave->status = 'Disetujui';
-        $leave->approved_by = Auth::id();
-        $leave->save();
+        $alreadyApproved = \Illuminate\Support\Facades\DB::table('leave_approvals')
+            ->where('leave_id', $leave->id)
+            ->where('user_id', Auth::id())
+            ->exists();
 
-        $this->syncLeaveToAttendance($leave);
+        if ($alreadyApproved) {
+            return redirect()->back()->with('error', 'Anda sudah menyetujui pengajuan ini sebelumnya.');
+        }
+
+        \Illuminate\Support\Facades\DB::table('leave_approvals')->insert([
+            'leave_id' => $leave->id,
+            'user_id' => Auth::id(),
+            'created_at' => now(),
+            'updated_at' => now()
+        ]);
+
+        $currentApprovals = \Illuminate\Support\Facades\DB::table('leave_approvals')->where('leave_id', $leave->id)->count();
+        $requiredApprovals = \Illuminate\Support\Facades\DB::table('settings')->where('key', 'required_approvals')->value('value') ?? 1;
+
+        if ($currentApprovals >= $requiredApprovals) {
+            $leave->status = 'Disetujui';
+            $leave->approved_by = Auth::id();
+            $leave->save();
+
+            $this->syncLeaveToAttendance($leave);
+            $pesan = 'Pengajuan ' . $leave->jenis . ' berhasil disetujui sepenuhnya.';
+        } else {
+            $pesan = 'Berhasil menyetujui. Masih menunggu ' . ($requiredApprovals - $currentApprovals) . ' persetujuan lagi.';
+        }
 
         AuditLog::create([
             'user_id' => Auth::id(),
             'action' => 'approve',
             'module' => 'izin',
-            'description' => "Menyetujui pengajuan {$leave->jenis} untuk karyawan ID {$leave->karyawan_id}",
+            'description' => "Menyetujui pengajuan {$leave->jenis} untuk karyawan ID {$leave->karyawan_id}. (Approval ke-$currentApprovals dari $requiredApprovals)",
             'ip_address' => request()->ip(),
             'user_agent' => request()->userAgent(),
             'status' => 'success',
         ]);
 
-        return redirect()->back()->with('status', 'Pengajuan ' . $leave->jenis . ' untuk ' . $leave->karyawan->nama . ' berhasil disetujui.');
+        return redirect()->back()->with('status', $pesan);
     }
 
     private function syncLeaveToAttendance(Leave $leave)

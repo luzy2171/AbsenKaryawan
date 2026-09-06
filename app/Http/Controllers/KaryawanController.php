@@ -83,12 +83,12 @@ class KaryawanController extends Controller
 
         // 2. Lakukan pengecekan dan penyimpanan data ke DB Web secara massal
         foreach ($usersDariMesin as $user) {
-            $exists = Karyawan::where('id_karyawan', $user->pin)->exists();
+            $exists = Karyawan::where('id_karyawan', $user['pin'])->exists();
 
             if (!$exists) {
                 Karyawan::create([
-                    'id_karyawan' => $user->pin,
-                    'nama'        => $user->name,
+                    'id_karyawan' => $user['pin'],
+                    'nama'        => $user['name'],
                     'departemen'  => '-',
                     'jabatan'     => 'Staf',
                     'status'      => 'Aktif'
@@ -108,8 +108,8 @@ class KaryawanController extends Controller
      */
     public function destroy($id, AbsensiService $absensiService)
     {
-        if (!auth()->user()->canEdit()) {
-            abort(403, 'Akses ditolak. Role Anda tidak dapat menghapus karyawan.');
+        if (!auth()->user()->isTrueApprover()) {
+            abort(403, 'Akses ditolak. Hanya Approver dan Superadmin yang dapat menghapus karyawan.');
         }
 
         $karyawan = Karyawan::findOrFail($id);

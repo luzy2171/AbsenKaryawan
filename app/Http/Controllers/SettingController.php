@@ -23,6 +23,7 @@ class SettingController extends Controller
             'toleransi_terlambat' => 'required|numeric|min:0',
             'auto_pull_interval' => 'required|numeric|min:1',
             'jam_lembur_mulai' => 'required|date_format:H:i',
+            'required_approvals' => 'required|numeric|min:1',
         ]);
 
         // Get old values for audit
@@ -33,6 +34,7 @@ class SettingController extends Controller
         DB::table('settings')->updateOrInsert(['key' => 'toleransi_terlambat'], ['value' => $request->toleransi_terlambat, 'updated_at' => now()]);
         DB::table('settings')->updateOrInsert(['key' => 'auto_pull_interval'], ['value' => $request->auto_pull_interval, 'updated_at' => now()]);
         DB::table('settings')->updateOrInsert(['key' => 'jam_lembur_mulai'], ['value' => $request->jam_lembur_mulai, 'updated_at' => now()]);
+        DB::table('settings')->updateOrInsert(['key' => 'required_approvals'], ['value' => $request->required_approvals, 'updated_at' => now()]);
 
         // Log audit
         AuditLogger::settingsUpdated($oldSettings, [
@@ -41,6 +43,7 @@ class SettingController extends Controller
             'toleransi_terlambat' => $request->toleransi_terlambat,
             'auto_pull_interval' => $request->auto_pull_interval,
             'jam_lembur_mulai' => $request->jam_lembur_mulai,
+            'required_approvals' => $request->required_approvals,
         ]);
 
         return redirect()->back()->with('success', 'Pengaturan berhasil diperbarui!');
