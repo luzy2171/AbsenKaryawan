@@ -46,7 +46,7 @@
                             <i class="bi bi-calendar-check me-2"></i> Absensi
                         </a>
                     </li>
-                    @if(auth()->user()->isAdmin())
+                    @if(auth()->user()->isApprover())
                         <li class="nav-item mt-3">
                             <small class="text-muted px-3 fw-semibold"
                                 style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small>
@@ -80,13 +80,16 @@
                                 <i class="bi bi-person-gear me-2"></i> Manajemen User
                             </a>
                         </li>
+                        @endif
+@if(auth()->user()->isTrueApprover())
                         <li class="nav-item">
                             <a class="nav-link {{ request()->is('admin/audit-logs*') ? 'active' : '' }}"
                                 href="{{ url('/admin/audit-logs') }}">
                                 <i class="bi bi-journal-text me-2"></i> Audit Logs
                             </a>
                         </li>
-                    @endif
+                        @endif
+
                     @endif
                     <li class="nav-item mt-auto pt-3 border-top">
                         <form action="{{ route('logout') }}" method="POST">
@@ -108,16 +111,34 @@
                             <small class="text-muted">{{ \Carbon\Carbon::now()->translatedFormat('l, d F Y') }}</small>
                         </div>
                     </div>
-                    <div class="d-flex align-items-center">
-                        <div class="text-end me-3">
-                            <p class="mb-0 fw-semibold small">{{ auth()->user()->name }}</p>
-                            <small
-                                class="text-muted">{{ auth()->user()->isSuperadmin() ? 'Superadmin' : 'Admin' }}</small>
-                        </div>
-                        <div class="avatar-circle bg-success text-white"
-                            style="width: 45px; height: 45px; font-size: 18px;">
-                            {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                        </div>
+                                        <div class="dropdown">
+                        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false" style="color: inherit;">
+                            <div class="text-end me-3">
+                                <p class="mb-0 fw-semibold small">{{ auth()->user()->name }}</p>
+                                <small
+                                    class="text-muted">{{ match(auth()->user()->role) { 'superadmin' => 'Superadmin', 'approval' => 'Approval', default => 'Admin' } }}</small>
+                            </div>
+                            <div class="avatar-circle bg-success text-white"
+                                style="width: 45px; height: 45px; font-size: 18px;">
+                                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
+                            </div>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="dropdownUser">
+                            <li>
+                                <a class="dropdown-item d-flex align-items-center py-2" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">
+                                    <i class="bi bi-person-circle me-2 text-primary"></i> Edit Profil & Password
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form action="{{ route('logout') }}" method="POST" class="m-0">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item d-flex align-items-center py-2 text-danger">
+                                        <i class="bi bi-box-arrow-right me-2"></i> Keluar
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
                     </div>
                 </div>
 
@@ -308,6 +329,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    @if(env('BROADCAST_DRIVER') === 'reverb' || env('BROADCAST_DRIVER') === 'pusher')
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script>
         // Konfigurasi Pusher untuk real-time updates
@@ -318,7 +340,7 @@
             forceTLS: {{ env('PUSHER_SCHEME') === 'https' ? 'true' : 'false' }},
             disableStats: true,
             enabledTransports: ['ws', 'wss']
-        });
+          });
 
         // Subscribe ke channel attendance untuk real-time absensi
         const attendanceChannel = pusher.subscribe('attendance');
@@ -333,14 +355,14 @@
 
             // Tampilkan notifikasi
             showNotification('Absensi Baru', `${data.karyawan_nama} telah melakukan absensi`);
-        });
+          });
 
         // Subscribe ke channel machine-status untuk status mesin
         const machineChannel = pusher.subscribe('machine-status');
         machineChannel.bind('machine.status.changed', function (data) {
             console.log('Machine status changed:', data);
             updateMachineStatus(data);
-        });
+          });
 
         function updateDashboardCounters() {
             // Reload halaman atau fetch data baru via AJAX
@@ -456,7 +478,10 @@
         if ('Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission();
         }
+    </script>
+    @endif
 
+    <script>
         // Donut Chart - Kehadiran Hari Ini
         const ctxDonut = document.getElementById('donutChart');
         if (ctxDonut) {
@@ -634,6 +659,46 @@
             });
         }
     </script>
+
+<!-- Modal Edit Profil -->
+<div class="modal fade" id="profileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-0 bg-primary text-white" style="border-radius: 16px 16px 0 0;">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-circle me-2"></i>Edit Profil & Password</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('profile.update') }}" method="POST">
+                @csrf
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nama Lengkap</label>
+                        <input type="text" name="name" class="form-control" value="{{ auth()->user()->name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Username</label>
+                        <input type="text" name="username" class="form-control" value="{{ auth()->user()->username }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email" name="email" class="form-control" value="{{ auth()->user()->email }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Password Baru <small class="text-muted fw-normal">(Opsional)</small></label>
+                        <input type="password" name="password" class="form-control" placeholder="Kosongkan jika tidak ingin mengubah password">
+                        <small class="text-muted">Minimal 6 karakter jika ingin diubah.</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

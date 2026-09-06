@@ -30,7 +30,7 @@ class UserController extends Controller
             'username' => 'required|string|max:255|unique:users,username',
             'email'    => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:6',
-            'role'     => 'required|in:admin,superadmin',
+            'role'     => 'required|in:admin,superadmin,approval',
         ]);
 
         $user = User::create([
@@ -58,7 +58,7 @@ class UserController extends Controller
             'name'     => 'required|string|max:255',
             'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user->id)],
             'email'    => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'role'     => 'required|in:admin,superadmin',
+            'role'     => 'required|in:admin,superadmin,approval',
             'password' => 'nullable|string|min:6',
         ]);
 

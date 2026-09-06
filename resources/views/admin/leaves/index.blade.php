@@ -43,7 +43,7 @@
                     </a>
                 </li>
                 
-@if(auth()->user()->isAdmin())
+@if(auth()->user()->isApprover())
                 <li class="nav-item mt-3">
                     <small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small>
                 </li>
@@ -73,12 +73,15 @@
                         <i class="bi bi-person-gear me-2"></i> Manajemen User
                     </a>
                 </li>
+                @endif
+@if(auth()->user()->isTrueApprover())
                 <li class="nav-item">
                     <a class="nav-link {{ request()->is('admin/audit-logs*') ? 'active' : '' }}" href="{{ url('/admin/audit-logs') }}">
                         <i class="bi bi-journal-text me-2"></i> Audit Logs
                     </a>
                 </li>
                 @endif
+
                 @endif
                 
                 <li class="nav-item mt-auto pt-3 border-top">
@@ -102,11 +105,13 @@
                         <small class="text-muted">Data ini akan otomatis diisi ke laporan Absensi sebagai pengganti Alpha.</small>
                     </div>
                 </div>
+                @if(auth()->user()->canEdit())
                 <div>
                     <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addLeaveModal">
                         <i class="bi bi-plus-lg me-1"></i> Tambah Pengajuan
                     </button>
                 </div>
+                @endif
             </div>
 
             @if(session('status'))
@@ -165,6 +170,7 @@
                                 <th class="text-muted small fw-bold">TANGGAL</th>
                                 <th class="text-muted small fw-bold">NAMA KARYAWAN</th>
                                 <th class="text-muted small fw-bold">JENIS</th>
+                                <th class="text-muted small fw-bold">STATUS</th>
                                 <th class="text-muted small fw-bold">LAMA HARI</th>
                                 <th class="text-muted small fw-bold">KETERANGAN</th>
                                 <th class="text-muted small fw-bold">DOKUMEN</th>
@@ -203,6 +209,20 @@
                                     <span class="badge {{ $badgeClass }} px-3 py-2" style="font-size: 12px;">{{ $leave->jenis }}</span>
                                 </td>
                                 <td>
+                                    @if($leave->status === 'Disetujui')
+                                        <span class="badge bg-success-subtle text-success px-3 py-2" style="font-size: 12px;">
+                                            <i class="bi bi-check-circle-fill me-1"></i> Disetujui
+                                        </span>
+                                        <div class="small text-muted mt-1" style="font-size: 10px;">
+                                            Oleh: {{ $leave->approver->name ?? 'Sistem' }}
+                                        </div>
+                                    @else
+                                        <span class="badge bg-warning-subtle text-warning px-3 py-2" style="font-size: 12px;">
+                                            <i class="bi bi-hourglass-split me-1"></i> Menunggu Approval
+                                        </span>
+                                    @endif
+                                </td>
+                                <td>
                                     <span class="fw-semibold">{{ $leave->tanggal_mulai->diffInDays($leave->tanggal_selesai) + 1 }} Hari</span>
                                 </td>
                                 <td>
@@ -220,6 +240,16 @@
                                     @endif
                                 </td>
                                 <td class="text-end">
+                                    @if($leave->status === 'Menunggu' && auth()->user()->isTrueApprover())
+                                        <form action="{{ route('admin.leaves.approve', $leave->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Apakah Anda yakin akan menyetujui pengajuan ini?');">
+                                            @csrf
+                                            @method('PUT')
+                                            <button type="submit" class="btn btn-sm btn-outline-success">
+                                                <i class="bi bi-check-circle"></i> Setuju
+                                            </button>
+                                        </form>
+                                    @endif
+                                    @if(auth()->user()->isTrueApprover())
                                     <form action="{{ route('admin.leaves.destroy', $leave->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus data pengajuan ini? Ini juga akan menghapus cap absensi Izin/Cuti/Sakit untuk tanggal tersebut di Laporan Absensi.');">
                                         @csrf
                                         @method('DELETE')
@@ -227,11 +257,12 @@
                                             <i class="bi bi-trash"></i> Hapus
                                         </button>
                                     </form>
+                                    @endif
                                 </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="7" class="text-center py-5">
+                                <td colspan="8" class="text-center py-5">
                                     <i class="bi bi-inbox fs-1 d-block mb-3 text-secondary opacity-50"></i>
                                     <p class="text-muted mb-0">Belum ada data pengajuan izin/cuti.</p>
                                 </td>

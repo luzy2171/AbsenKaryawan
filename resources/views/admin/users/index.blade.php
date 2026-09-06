@@ -41,7 +41,7 @@
                         <i class="bi bi-calendar-check me-2"></i> Absensi
                     </a>
                 </li>
-                @if(auth()->user()->isAdmin())
+                @if(auth()->user()->isApprover())
                 <li class="nav-item mt-3">
                     <small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small>
                 </li>
@@ -71,12 +71,15 @@
                         <i class="bi bi-person-gear me-2"></i> Manajemen User
                     </a>
                 </li>
+                @endif
+@if(auth()->user()->isTrueApprover())
                 <li class="nav-item">
                     <a class="nav-link {{ request()->is('admin/audit-logs*') ? 'active' : '' }}" href="{{ url('/admin/audit-logs') }}">
                         <i class="bi bi-journal-text me-2"></i> Audit Logs
                     </a>
                 </li>
                 @endif
+
                 @endif
                 <li class="nav-item mt-auto pt-3 border-top">
                     <form action="{{ route('logout') }}" method="POST">
@@ -170,9 +173,21 @@
                                 </td>
                                 <td class="text-muted">{{ $u->email }}</td>
                                 <td>
-                                    <span class="badge {{ $u->role === 'superadmin' ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success' }}">
-                                        <i class="bi {{ $u->role === 'superadmin' ? 'bi-shield-fill-check' : 'bi-person-check' }} me-1"></i>
-                                        {{ $u->role === 'superadmin' ? 'Superadmin' : 'Admin' }}
+                                    <span class="badge {{ match($u->role) {
+                                        'superadmin' => 'bg-danger-subtle text-danger',
+                                        'approval' => 'bg-info-subtle text-info',
+                                        default => 'bg-success-subtle text-success'
+                                    } }}">
+                                        <i class="bi {{ match($u->role) {
+                                            'superadmin' => 'bi-shield-fill-check',
+                                            'approval' => 'bi-person-check-fill',
+                                            default => 'bi-person-check'
+                                        } }} me-1"></i>
+                                        {{ match($u->role) {
+                                            'superadmin' => 'Superadmin',
+                                            'approval' => 'Approval',
+                                            default => 'Admin'
+                                        } }}
                                     </span>
                                 </td>
                                 <td class="text-muted small">
@@ -264,6 +279,7 @@
                         </label>
                         <select name="role" class="form-select">
                             <option value="admin" selected>Admin</option>
+                            <option value="approval">Approval (Setuju Izin & Log Audit)</option>
                             <option value="superadmin">Superadmin</option>
                         </select>
                     </div>
@@ -331,6 +347,7 @@
                         </label>
                         <select name="role" id="editRole" class="form-select">
                             <option value="admin">Admin</option>
+                            <option value="approval">Approval (Setuju Izin & Log Audit)</option>
                             <option value="superadmin">Superadmin</option>
                         </select>
                     </div>

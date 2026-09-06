@@ -9,8 +9,44 @@ use App\Models\MachineStatus;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
+use App\Helpers\AuditLogger;
+
 class DashboardController extends Controller
 {
+    public function updateProfile(Request $request)
+    {
+        $user = auth()->user();
+
+        $request->validate([
+            'name'     => 'required|string|max:255',
+            'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user->id)],
+            'email'    => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'password' => 'nullable|string|min:6',
+        ]);
+
+        $oldData = [
+            'username' => $user->username,
+            'name' => $user->name,
+            'role' => $user->role,
+        ];
+
+        $user->name     = $request->name;
+        $user->username = $request->username;
+        $user->email    = $request->email;
+
+        if ($request->filled('password')) {
+            $user->password = Hash::make($request->password);
+        }
+
+        $user->save();
+
+        AuditLogger::userUpdated($user, $oldData);
+
+        return redirect()->back()->with('status', 'Profil berhasil diperbarui.');
+    }
+
     public function index()
     {
         // Mengambil tanggal hari ini (Format: YYYY-MM-DD)

@@ -70,6 +70,8 @@
                         <i class="bi bi-person-gear me-2"></i> Manajemen User
                     </a>
                 </li>
+                @endif
+@if(auth()->user()->isTrueApprover())
                 <li class="nav-item">
                     <a class="nav-link" href="{{ url('/admin/audit-logs') }}">
                         <i class="bi bi-journal-text me-2"></i> Audit Logs

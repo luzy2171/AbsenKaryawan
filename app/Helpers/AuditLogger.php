@@ -21,9 +21,24 @@ class AuditLogger
         );
     }
 
+/**
+      * Log Custom Activity
+      */
+    public static function logCustom(string $action, string $description, string $module = 'izin', string $status = 'success', $newValues = null, $oldValues = null)
+    {
+        AuditLog::log(
+            action: $action,
+            module: $module,
+            description: $description,
+            oldValues: $oldValues,
+            newValues: $newValues,
+            status: $status
+        );
+    }
+
     /**
-     * Log Logout Activity
-     */
+      * Log Logout Activity
+      */
     public static function logout()
     {
         AuditLog::log(

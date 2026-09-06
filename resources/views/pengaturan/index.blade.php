@@ -37,12 +37,17 @@
                         <i class="bi bi-database-fill-gear me-2"></i> Maintenance DB
                     </a>
                 </li>
+                @endif
+@if(auth()->user()->isTrueApprover())
                 <li class="nav-item"><a class="nav-link {{ request()->is('admin/users*') ? 'active' : '' }}" href="{{ url('/admin/users') }}"><i class="bi bi-person-gear me-2"></i> Manajemen User</a></li>
+                @if(auth()->user()->isTrueApprover())
                 <li class="nav-item"><a class="nav-link {{ request()->is('admin/audit-logs*') ? 'active' : '' }}" href="{{ url('/admin/audit-logs') }}"><i class="bi bi-journal-text me-2"></i> Audit Logs</a></li>
                 @endif
+
                 <li class="nav-item mt-auto pt-3 border-top">
                     <form action="{{ route('logout') }}" method="POST">@csrf<button type="submit" class="nav-link text-danger w-100 text-start border-0 bg-transparent"><i class="bi bi-box-arrow-left me-2"></i> Keluar</button></form>
                 </li>
+                @endif
             </ul>
         </div>
 

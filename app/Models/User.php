@@ -33,10 +33,34 @@ class User extends Authenticatable
         return $this->role === 'superadmin';
     }
 
-    /**
-     * Cek apakah user adalah Admin (termasuk superadmin).
-     */
+/**
+      * Cek apakah user adalah Admin (termasuk superadmin).
+      */
     public function isAdmin(): bool
+    {
+        return in_array($this->role, ['superadmin', 'admin']);
+    }
+
+    /**
+      * Cek apakah user adalah Approval (termasuk admin dan superadmin).
+      */
+    public function isApprover(): bool
+    {
+        return in_array($this->role, ['superadmin', 'admin', 'approval']);
+    }
+
+    /**
+      * Cek apakah user adalah Approver murni (termasuk superadmin, tapi tidak admin).
+      */
+    public function isTrueApprover(): bool
+    {
+        return in_array($this->role, ['superadmin', 'approval']);
+    }
+
+    /**
+      * Cek apakah user dapat mengubah data (admin atau superadmin).
+      */
+    public function canEdit(): bool
     {
         return in_array($this->role, ['superadmin', 'admin']);
     }

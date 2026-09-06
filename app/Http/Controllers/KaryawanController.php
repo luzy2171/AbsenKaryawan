@@ -23,7 +23,9 @@ class KaryawanController extends Controller
      */
     public function store(Request $request, AbsensiService $absensiService)
     {
-        // 1. Validasi Input Form
+        if (!auth()->user()->canEdit()) {
+            abort(403, 'Akses ditolak. Role Anda tidak dapat menambah karyawan.');
+        }
         $request->validate([
             'id_karyawan' => 'required|unique:karyawans,id_karyawan',
             'nama'        => 'required|string|max:255',
@@ -106,6 +108,10 @@ class KaryawanController extends Controller
      */
     public function destroy($id, AbsensiService $absensiService)
     {
+        if (!auth()->user()->canEdit()) {
+            abort(403, 'Akses ditolak. Role Anda tidak dapat menghapus karyawan.');
+        }
+
         $karyawan = Karyawan::findOrFail($id);
 
         // 1. Hapus user dari mesin absensi fisik berdasarkan PIN/ID-nya

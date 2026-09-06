@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Leave;
 use App\Models\Karyawan;
 use App\Models\Attendance;
-use App\Helpers\AuditLogger;
+use App\Models\AuditLog;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -23,11 +23,11 @@ class LeaveController extends Controller
                 $q->where('nama', 'like', "%{$search}%");
             });
         }
-        
+
         if ($request->filled('bulan') && $request->filled('tahun')) {
             $start = Carbon::create($request->tahun, $request->bulan, 1)->startOfMonth();
             $end = Carbon::create($request->tahun, $request->bulan, 1)->endOfMonth();
-            
+
             $query->where(function($q) use ($start, $end) {
                 $q->whereBetween('tanggal_mulai', [$start, $end])
                   ->orWhereBetween('tanggal_selesai', [$start, $end]);
@@ -42,6 +42,10 @@ class LeaveController extends Controller
 
     public function store(Request $request)
     {
+        if (!auth()->user()->canEdit()) {
+            abort(403, 'Akses ditolak. Role Anda tidak dapat menambah pengajuan.');
+        }
+
         $request->validate([
             'karyawan_id' => 'required|exists:karyawans,id',
             'tanggal_mulai' => 'required|date',
@@ -50,11 +54,10 @@ class LeaveController extends Controller
             'keterangan' => 'nullable|string',
             'dokumen' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048'
         ]);
-        
+
         $karyawan = Karyawan::findOrFail($request->karyawan_id);
         $lamaHari = Carbon::parse($request->tanggal_mulai)->diffInDays(Carbon::parse($request->tanggal_selesai)) + 1;
 
-        // Validasi Sisa Cuti khusus untuk pengajuan berjenis "Cuti"
         if ($request->jenis === 'Cuti') {
             $sisaCuti = $karyawan->sisaCuti();
             if ($lamaHari > $sisaCuti) {
@@ -70,7 +73,7 @@ class LeaveController extends Controller
             $dokumenPath = str_replace('public/', '', $dokumenPath);
         }
 
-$leave = Leave::create([
+        $leave = Leave::create([
             'karyawan_id' => $request->karyawan_id,
             'tanggal_mulai' => $request->tanggal_mulai,
             'tanggal_selesai' => $request->tanggal_selesai,
@@ -81,12 +84,19 @@ $leave = Leave::create([
             'approved_by' => Auth::id()
         ]);
 
-        // FITUR INTI: Sinkronisasi ke Tabel Absensi
-        // Jika disetujui, otomatis hapus record "Alpha/Terlambat" yang ada di rentang tanggal itu
-        // lalu buatkan record absensi baru dengan status Cuti/Sakit/Izin
-        $this->syncLeaveToAttendance($leave);
+        if ($leave->status === 'Disetujui') {
+            $this->syncLeaveToAttendance($leave);
+        }
 
-        AuditLogger::logCustom('Izin/Cuti', "Menambahkan pengajuan {$leave->jenis} untuk karyawan ID {$leave->karyawan_id} dari tgl {$leave->tanggal_mulai->format('d/m/Y')} s/d {$leave->tanggal_selesai->format('d/m/Y')}");
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'create',
+            'module' => 'izin',
+            'description' => "Menambahkan pengajuan {$leave->jenis} untuk karyawan ID {$leave->karyawan_id} dari tgl {$leave->tanggal_mulai->format('d/m/Y')} s/d {$leave->tanggal_selesai->format('d/m/Y')}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'status' => 'success',
+        ]);
 
         $pesanSukses = 'Pengajuan ' . $request->jenis . ' berhasil ditambahkan.';
         if ($request->jenis === 'Cuti') {
@@ -96,17 +106,16 @@ $leave = Leave::create([
         return redirect()->back()->with('status', $pesanSukses);
     }
 
-public function destroy($id)
+    public function destroy($id)
     {
         $leave = Leave::findOrFail($id);
         $jenis = $leave->jenis;
         $karyawan_id = $leave->karyawan_id;
 
-        if (auth()->user()->isSuperadmin() === false && auth()->user()->id !== $leave->approved_by) {
-            abort(403, 'Akses ditolak. Anda hanya dapat menghapus pengajuan yang Anda buat.');
+        if (!auth()->user()->isTrueApprover()) {
+            abort(403, 'Akses ditolak. Hanya Approver dan Superadmin yang dapat menghapus pengajuan ini.');
         }
-        
-        // Hapus dari tabel absensi
+
         Attendance::where('karyawan_id', $leave->karyawan_id)
             ->whereBetween('tanggal', [$leave->tanggal_mulai->toDateString(), $leave->tanggal_selesai->toDateString()])
             ->where('status', $leave->jenis)
@@ -117,36 +126,69 @@ public function destroy($id)
         }
 
         $leave->delete();
-        
-        AuditLogger::logCustom('Izin/Cuti', "Menghapus data $jenis karyawan ID $karyawan_id");
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'delete',
+            'module' => 'izin',
+            'description' => "Menghapus data $jenis karyawan ID $karyawan_id",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'status' => 'success',
+        ]);
 
         return redirect()->back()->with('status', 'Data ' . $jenis . ' berhasil dihapus. Laporan absensi telah diperbarui.');
     }
-    
-    /**
-     * Memasukkan data izin ke tabel absensi agar tampil di laporan PDF/Excel
-     */
+
+    public function approve($id)
+    {
+        if (!auth()->user()->isTrueApprover()) {
+            abort(403, 'Akses ditolak. Hanya Approver dan Superadmin yang dapat menyetujui pengajuan.');
+        }
+
+        $leave = Leave::findOrFail($id);
+
+        if ($leave->status === 'Disetujui') {
+            return redirect()->back()->with('error', 'Pengajuan ini sudah disetujui.');
+        }
+
+        $leave->status = 'Disetujui';
+        $leave->approved_by = Auth::id();
+        $leave->save();
+
+        $this->syncLeaveToAttendance($leave);
+
+        AuditLog::create([
+            'user_id' => Auth::id(),
+            'action' => 'approve',
+            'module' => 'izin',
+            'description' => "Menyetujui pengajuan {$leave->jenis} untuk karyawan ID {$leave->karyawan_id}",
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'status' => 'success',
+        ]);
+
+        return redirect()->back()->with('status', 'Pengajuan ' . $leave->jenis . ' untuk ' . $leave->karyawan->nama . ' berhasil disetujui.');
+    }
+
     private function syncLeaveToAttendance(Leave $leave)
     {
         $start = Carbon::parse($leave->tanggal_mulai);
         $end = Carbon::parse($leave->tanggal_selesai);
-        
+
         $dates = [];
         for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
-            // Hanya masukkan ke absen jika bukan hari minggu (Opsional: sesuaikan kebijakan perusahaan)
             if (!$date->isSunday()) {
                 $dates[] = $date->toDateString();
             }
         }
-        
+
         foreach ($dates as $date) {
-            // Cek apakah ada record absen di tanggal tsb
             $attendance = Attendance::where('karyawan_id', $leave->karyawan_id)
                 ->where('tanggal', $date)
                 ->first();
-                
+
             if ($attendance) {
-                // Jika sudah ada (mungkin Alpha atau Terlambat), update jadi Sakit/Izin/Cuti
                 $attendance->update([
                     'status' => $leave->jenis,
                     'jam_masuk' => null,
@@ -154,7 +196,6 @@ public function destroy($id)
                     'verifikasi' => 'Sistem (Izin)'
                 ]);
             } else {
-                // Jika belum ada, buat record baru
                 Attendance::create([
                     'karyawan_id' => $leave->karyawan_id,
                     'tanggal' => $date,
