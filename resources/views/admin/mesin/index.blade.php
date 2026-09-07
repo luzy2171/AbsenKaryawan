@@ -160,26 +160,23 @@
                             <p class="text-muted small">Kirim akun karyawan lokal ke mesin absensi fisik (Sinkronisasi Web ke Mesin).</p>
                             <form action="{{ route('admin.mesin.kirim') }}" method="POST">
                                 @csrf
-                                <div class="row g-2 mb-3">
-                                    <div class="col-md-6">
-                                        <select class="form-select bg-light border-0" name="karyawan_id" required>
-                                            <option value="">-- Pilih Karyawan --</option>
-                                            @foreach($karyawans as $k)
-                                                <option value="{{ $k->id }}">{{ $k->id_karyawan }} - {{ $k->nama }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <select class="form-select bg-light border-0" name="mesin_tujuan" required>
-                                            <option value="">-- Mesin Tujuan --</option>
-                                            <option value="all">Semua Mesin (HIK & Solution)</option>
-                                            <option value="hikvision">Hanya Hikvision</option>
-                                            <option value="solution">Hanya Solution</option>
-                                        </select>
-                                    </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-bold mb-1">1. Pilih Mesin Tujuan</label>
+                                    <select class="form-select bg-light border-0" name="mesin_tujuan" id="kirim_mesin_tujuan" required>
+                                        <option value="">-- Mesin Tujuan --</option>
+                                        <option value="all">Semua Mesin (HIK & Solution)</option>
+                                        <option value="hikvision">Hanya Hikvision</option>
+                                        <option value="solution">Hanya Solution</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-bold mb-1">2. Pilih Karyawan</label>
+                                    <select class="form-select bg-light border-0" name="karyawan_id" id="kirim_karyawan_id" required disabled>
+                                        <option value="">-- Pilih Mesin Terlebih Dahulu --</option>
+                                    </select>
                                 </div>
                                 <button type="submit" class="btn btn-primary w-100 fw-bold rounded-3">
-                                    <i class="bi bi-send me-1"></i> Kirim
+                                    <i class="bi bi-send me-1"></i> Kirim ke Mesin
                                 </button>
                             </form>
                         </div>
@@ -627,6 +624,54 @@
         var modal = new bootstrap.Modal(document.getElementById('editDeviceModal'));
         modal.show();
     }
+
+    // Data sinkronisasi untuk fitur Kirim Data Pintar
+    const localKaryawans = @json($karyawans);
+    const usersHik = @json(array_column((array)$usersHik, 'pin'));
+    const usersSol = @json(array_column((array)$usersSol, 'pin'));
+
+    const selectMesinKirim = document.getElementById('kirim_mesin_tujuan');
+    const selectKaryawanKirim = document.getElementById('kirim_karyawan_id');
+
+    selectMesinKirim.addEventListener('change', function() {
+        const mesin = this.value;
+        selectKaryawanKirim.innerHTML = '<option value="">-- Pilih Karyawan --</option>';
+        
+        if(!mesin) {
+            selectKaryawanKirim.disabled = true;
+            selectKaryawanKirim.innerHTML = '<option value="">-- Pilih Mesin Terlebih Dahulu --</option>';
+            return;
+        }
+
+        selectKaryawanKirim.disabled = false;
+        let countUnsynced = 0;
+
+        localKaryawans.forEach(k => {
+            let isRegistered = false;
+            let pinStr = String(k.id_karyawan);
+            
+            if(mesin === 'hikvision') {
+                isRegistered = usersHik.includes(pinStr);
+            } else if(mesin === 'solution') {
+                isRegistered = usersSol.includes(pinStr);
+            } else if(mesin === 'all') {
+                isRegistered = usersHik.includes(pinStr) && usersSol.includes(pinStr);
+            }
+
+            if(!isRegistered) {
+                let option = document.createElement('option');
+                option.value = k.id;
+                option.text = k.id_karyawan + ' - ' + k.nama;
+                selectKaryawanKirim.appendChild(option);
+                countUnsynced++;
+            }
+        });
+
+        if(countUnsynced === 0) {
+            selectKaryawanKirim.innerHTML = '<option value="">-- Semua Karyawan Sudah Sinkron --</option>';
+            selectKaryawanKirim.disabled = true;
+        }
+    });
 
     // Real-Time Event Polling
     let pollingInterval = null;
