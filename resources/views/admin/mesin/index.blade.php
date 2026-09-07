@@ -129,6 +129,7 @@
                                             <td class="small text-muted">{{ $m->getLastPingHuman() }}</td>
                                             <td class="small text-muted">{{ $m->getFormattedResponseTime() }}</td>
                                             <td class="text-end pe-3">
+                                                <button type="button" class="btn btn-sm btn-outline-warning border-0 me-1" title="Edit Perangkat" onclick="editDevice({{ $m->id }}, '{{ $m->machine_name }}', '{{ $m->machine_type }}', '{{ $m->machine_ip }}', '{{ $m->port }}', '{{ $m->username }}')"><i class="bi bi-pencil"></i></button>
                                                 <form action="{{ route('admin.mesin.device.ping', $m->id) }}" method="POST" class="d-inline">
                                                     @csrf
                                                     <button type="submit" class="btn btn-sm btn-outline-success border-0 me-1" title="Ping Koneksi"><i class="bi bi-broadcast"></i></button>
@@ -199,6 +200,30 @@
                                 </div>
                                 <button type="submit" class="btn btn-outline-success w-100 fw-bold rounded-3">
                                     Tarik Data
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Real-Time Event & Controlled -->
+                    <div class="card border-0 shadow-sm rounded-4 mt-4 h-auto">
+                        <div class="card-header bg-dark text-white border-bottom-0 pt-3 pb-2 px-4 rounded-top-4">
+                            <h6 class="fw-bold m-0"><i class="bi bi-shield-lock me-2"></i>Real-Time Event & Controlled</h6>
+                        </div>
+                        <div class="card-body p-4">
+                            <p class="text-muted small mb-3">Kontrol akses pintu dari jarak jauh (Remote Door Open) khusus perangkat yang didukung (Hikvision ISAPI).</p>
+                            <form action="{{ route('admin.mesin.door.open') }}" method="POST" onsubmit="return confirm('Yakin ingin membuka pintu ini sekarang?');">
+                                @csrf
+                                <div class="mb-3">
+                                    <select class="form-select bg-light border-0" name="machine_id" required>
+                                        <option value="">-- Pilih Pintu / Mesin --</option>
+                                        @foreach($machines as $m)
+                                            <option value="{{ $m->id }}">{{ $m->machine_name }} ({{ $m->machine_type == 'hikvision' ? 'Hikvision' : 'Solution' }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-warning w-100 fw-bold rounded-3 text-dark">
+                                    <i class="bi bi-unlock-fill me-2"></i> BUKA PINTU
                                 </button>
                             </form>
                         </div>
@@ -362,6 +387,62 @@
     </div>
 </div>
 
+<!-- Modal Edit Device -->
+<div class="modal fade" id="editDeviceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 bg-warning text-dark rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Edit Perangkat</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editDeviceForm" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Vendor / Tipe Mesin</label>
+                        <select name="machine_type" id="edit_machine_type" class="form-select bg-light border-0" required onchange="updateEditDefaultPort(this.value)">
+                            <option value="solution">Solution / ZKTeco</option>
+                            <option value="hikvision">Hikvision</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Nama Perangkat</label>
+                        <input type="text" name="machine_name" id="edit_machine_name" class="form-control bg-light border-0" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-8">
+                            <label class="form-label fw-semibold small text-muted">IP Address</label>
+                            <input type="text" name="machine_ip" id="edit_machine_ip" class="form-control bg-light border-0" required>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fw-semibold small text-muted">Port</label>
+                            <input type="number" name="port" id="edit_port" class="form-control bg-light border-0" required>
+                        </div>
+                    </div>
+                    
+                    <div id="editCredentialsArea" style="display: none;">
+                        <hr class="my-4">
+                        <p class="small text-muted mb-3"><i class="bi bi-info-circle me-1"></i>Otorisasi khusus Hikvision SDK</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted">Username</label>
+                            <input type="text" name="username" id="edit_username" class="form-control bg-light border-0">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted">Password (Kosongkan jika tidak diubah)</label>
+                            <input type="password" name="password" id="edit_password" class="form-control bg-light border-0">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light px-4 rounded-3 fw-semibold" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-warning px-4 rounded-3 fw-bold">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     function updateDefaultPort(val) {
@@ -372,6 +453,28 @@
             document.getElementById('inputPort').value = '4370';
             document.getElementById('credentialsArea').style.display = 'none';
         }
+    }
+
+    function updateEditDefaultPort(val) {
+        if(val === 'hikvision') {
+            document.getElementById('editCredentialsArea').style.display = 'block';
+        } else {
+            document.getElementById('editCredentialsArea').style.display = 'none';
+        }
+    }
+
+    function editDevice(id, name, type, ip, port, username) {
+        document.getElementById('editDeviceForm').action = "{{ url('admin/mesin-absensi/device') }}/" + id;
+        document.getElementById('edit_machine_name').value = name;
+        document.getElementById('edit_machine_type').value = type;
+        document.getElementById('edit_machine_ip').value = ip;
+        document.getElementById('edit_port').value = port;
+        document.getElementById('edit_username').value = username;
+        
+        updateEditDefaultPort(type);
+        
+        var modal = new bootstrap.Modal(document.getElementById('editDeviceModal'));
+        modal.show();
     }
 </script>
 </body>

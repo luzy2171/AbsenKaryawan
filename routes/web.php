@@ -62,8 +62,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('admin')->group(function () {
         Route::get('admin/mesin-absensi', [MesinAbsensiController::class, 'index'])->name('admin.mesin.index');
         Route::post('admin/mesin-absensi/device', [MesinAbsensiController::class, 'storeDevice'])->name('admin.mesin.device.store');
+        Route::put('admin/mesin-absensi/device/{id}', [MesinAbsensiController::class, 'updateDevice'])->name('admin.mesin.device.update');
         Route::delete('admin/mesin-absensi/device/{id}', [MesinAbsensiController::class, 'destroyDevice'])->name('admin.mesin.device.destroy');
         Route::post('admin/mesin-absensi/device/{id}/ping', [MesinAbsensiController::class, 'pingDevice'])->name('admin.mesin.device.ping');
+        Route::post('admin/mesin-absensi/door/open', [MesinAbsensiController::class, 'openDoor'])->name('admin.mesin.door.open');
         Route::post('admin/mesin-absensi/tarik', [MesinAbsensiController::class, 'tarikDataAll'])->name('admin.mesin.tarik');
         Route::post('admin/mesin-absensi/kirim', [MesinAbsensiController::class, 'kirimData'])->name('admin.mesin.kirim');
         Route::delete('admin/mesin-absensi/hapus/{mesin}/{pin}', [MesinAbsensiController::class, 'hapusData'])->name('admin.mesin.hapus');

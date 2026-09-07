@@ -161,6 +161,34 @@ class MesinAbsensiController extends Controller
         return redirect()->back()->with('status', "Device {$request->machine_name} berhasil ditambahkan!");
     }
     
+    public function updateDevice(Request $request, $id)
+    {
+        $machine = \App\Models\MachineStatus::findOrFail($id);
+        
+        $request->validate([
+            'machine_ip' => 'required|ip|unique:machine_status,machine_ip,'.$id,
+            'machine_name' => 'required|string|max:255',
+            'machine_type' => 'required|in:hikvision,solution',
+            'port' => 'required|numeric',
+        ]);
+
+        $updateData = [
+            'machine_ip' => $request->machine_ip,
+            'machine_name' => $request->machine_name,
+            'machine_type' => $request->machine_type,
+            'port' => $request->port,
+            'username' => $request->username,
+        ];
+
+        if ($request->filled('password')) {
+            $updateData['password'] = $request->password;
+        }
+
+        $machine->update($updateData);
+
+        return redirect()->back()->with('status', "Device {$request->machine_name} berhasil diperbarui!");
+    }
+    
     public function destroyDevice($id)
     {
         $machine = \App\Models\MachineStatus::findOrFail($id);
@@ -184,6 +212,8 @@ class MesinAbsensiController extends Controller
             $zkService->setConnection($machine->machine_ip, $machine->port);
             if ($zkService->connect()) {
                 $isOnline = true;
+                // Disconnect properly to free up resource
+                $zkService->connect()->disconnect();
             }
         }
         
@@ -194,6 +224,36 @@ class MesinAbsensiController extends Controller
             return redirect()->back()->with('status', "Ping berhasil! {$machine->machine_name} Online (Response: {$responseTime}ms).");
         } else {
             return redirect()->back()->with('error', "Ping gagal! {$machine->machine_name} Offline.");
+        }
+    }
+
+    public function openDoor(Request $request)
+    {
+        $request->validate([
+            'machine_id' => 'required|exists:machine_status,id'
+        ]);
+
+        $machine = \App\Models\MachineStatus::findOrFail($request->machine_id);
+        
+        if ($machine->machine_type == 'hikvision') {
+            $hikService = new HikvisionService();
+            $hikService->setConnection($machine->machine_ip, $machine->username, $machine->password, $machine->port);
+            
+            $data = json_encode([
+                "RemoteControlDoor" => [
+                    "cmd" => "open"
+                ]
+            ]);
+            $response = $hikService->request('/ISAPI/AccessControl/RemoteControl/door/1?format=json', 'PUT', $data);
+            
+            if ($response['http_code'] == 200) {
+                return back()->with('status', "Berhasil mengirim perintah BUKA PINTU ke mesin {$machine->machine_name} (Hikvision).");
+            } else {
+                return back()->with('error', "Gagal membuka pintu mesin {$machine->machine_name}. HTTP Code: {$response['http_code']}");
+            }
+        } else {
+            // ZKTeco workaround or notification
+            return back()->with('error', "Fitur Buka Pintu secara remote saat ini hanya didukung untuk vendor Hikvision melalui ISAPI. Vendor Solution memerlukan integrasi ADMS / Wiegand terpisah.");
         }
     }
 }
