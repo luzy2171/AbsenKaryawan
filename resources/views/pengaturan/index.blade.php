@@ -183,13 +183,11 @@
             <div class="card-custom p-4 bg-white fade-in">
                 <ul class="nav nav-pills mb-4" id="sdkTab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <a href="{{ route('pengaturan.index', ['view_users' => 1]) }}" class="nav-link @if(request()->has('view_users') || (!request()->has('view_users') && !request()->has('download_fp') && !request()->has('view_logs'))) active @endif">
+                        <a href="{{ route('pengaturan.index', ['view_users' => 1]) }}" class="nav-link @if(request()->has('view_users') || (!request()->has('view_users') && !request()->has('view_logs'))) active @endif">
                             <i class="bi bi-people me-1"></i> Data Karyawan
                         </a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link @if(request()->has('download_fp')) active @endif" id="fp-tab" data-bs-toggle="tab" data-bs-target="#tab-fp" type="button" role="tab"><i class="bi bi-fingerprint me-1"></i> Sidik Jari</button>
-                    </li>
+                    
                     <li class="nav-item" role="presentation">
                         <a href="{{ route('pengaturan.index', ['view_logs' => 1]) }}" class="nav-link @if(request()->has('view_logs')) active @endif">
                             <i class="bi bi-file-earmark-text me-1"></i> Log Mentah
@@ -197,7 +195,7 @@
                     </li>
                 </ul>
 <div class="tab-content" id="sdkTabContent">
-                    <div class="tab-pane fade @if(request()->has('view_users') || (!request()->has('view_users') && !request()->has('download_fp') && !request()->has('view_logs'))) show active @endif" id="tab-user" role="tabpanel">
+                    <div class="tab-pane fade @if(request()->has('view_users') || (!request()->has('view_users') && !request()->has('view_logs'))) show active @endif" id="tab-user" role="tabpanel">
                         @if(true) <!-- Selalu jalankan karena user di-autoload di controller -->
                             @if(!empty($users))
                             <div class="table-responsive">
@@ -243,65 +241,6 @@
                             <div class="text-center py-5"><i class="bi bi-people fs-1 d-block mb-3 text-secondary opacity-50"></i><p class="text-muted">Tekan "Tarik Data Log" untuk melihat data karyawan dari mesin</p></div>
                         @endif
                     </div>
-                    <div class="tab-pane fade @if(request()->has('download_fp')) show active @endif" id="tab-fp" role="tabpanel">
-                        @if(request()->has('download_fp'))
-                            <div class="row g-3 mb-3">
-                                <div class="col-md-4">
-                                            <select name="user_id" id="fpUserId" class="form-select form-select-sm">
-                                        <option value="1">User ID 1</option>
-                                        @foreach($users as $user)
-                                        @php $pin = is_array($user) ? ($user['pin'] ?? '') : ($user->pin ?? ''); @endphp
-                                        <option value="{{ $pin }}" {{ ($request->input('user_id') ?? '1') == $pin ? 'selected' : '' }}>{{ is_array($user) ? ($user['name'] ?? '-') : ($user->name ?? '-') }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4">
-                                    <select name="finger_id" id="fpFingerId" class="form-select form-select-sm">
-                                        <option value="0" {{ ($request->input('finger_id') ?? '0') == '0' ? 'selected' : '' }}>Jari 0</option>
-                                        <option value="1" {{ ($request->input('finger_id') ?? '0') == '1' ? 'selected' : '' }}>Jari 1</option>
-                                        <option value="2" {{ ($request->input('finger_id') ?? '0') == '2' ? 'selected' : '' }}>Jari 2</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-4 d-flex align-items-end">
-                                    <form action="{{ route('pengaturan.upload-fp') }}" method="POST" class="d-flex gap-2">
-                                        @csrf
-                                        <input type="hidden" name="user_id" id="uploadUserId" value="1">
-                                        <input type="hidden" name="finger_id" id="uploadFingerId" value="0">
-                                        <input type="hidden" name="template" id="fpTemplate" value="">
-                                        <button type="submit" class="btn btn-success btn-sm w-100"><i class="bi bi-upload me-1"></i>Upload FP</button>
-                                    </form>
-                                </div>
-                            </div>
-                            @if(!empty($templates))
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle">
-                                    <thead><tr class="border-bottom">
-                                        <th class="fw-bold text-muted small">USER ID</th>
-                                        <th class="fw-bold text-muted small">FINGER ID</th>
-                                        <th class="fw-bold text-muted small">SIZE</th>
-                                        <th class="fw-bold text-muted small">TEMPLATE</th>
-                                    </tr></thead>
-                                    <tbody>
-                                        @forelse($templates as $tpl)
-                                        <tr class="border-bottom">
-                                            <td><code class="small">{{ is_array($tpl) ? ($tpl['pin'] ?? '-') : ($tpl->pin ?? '-') }}</code></td>
-                                            <td><code class="small">{{ is_array($tpl) ? ($tpl['finger_id'] ?? '-') : ($tpl->finger_id ?? '-') }}</code></td>
-                                            <td><code class="small">{{ is_array($tpl) ? ($tpl['size'] ?? '-') : ($tpl->size ?? '-') }}</code></td>
-                                            <td><code class="small">{{ substr(is_array($tpl) ? ($tpl['template'] ?? '') : ($tpl->template ?? ''), 0, 30) }}...</code></td>
-                                        </tr>
-                                        @empty
-                                        <tr><td colspan="4" class="text-center py-4"><p class="text-muted mb-0">Tidak ada template</p></td></tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                            @else
-                            <div class="text-center py-4"><p class="text-muted">Tidak ada data template sidik jari</p></div>
-                            @endif
-                        @else
-                            <div class="text-center py-5"><i class="bi bi-fingerprint fs-1 d-block mb-3 text-secondary opacity-50"></i><p class="text-muted">Tekan "Tarik Data Log" lalu pilih user untuk melihat/mengelola sidik jari</p></div>
-                        @endif
-                    </div>
                     <div class="tab-pane fade @if(request()->has('view_logs')) show active @endif" id="tab-log" role="tabpanel">
                         @if(request()->has('view_logs'))
                             @if(!empty($logs))
@@ -344,17 +283,6 @@
         </div>
     </div>
 </div>
-
-<script>
-    function submitFpForm() {
-        var userId = document.getElementById('fpUserId').value;
-        var fingerId = document.getElementById('fpFingerId').value;
-        var uploadUserId = document.getElementById('uploadUserId');
-        var uploadFingerId = document.getElementById('uploadFingerId');
-        if (uploadUserId) uploadUserId.value = userId;
-        if (uploadFingerId) uploadFingerId.value = fingerId;
-    }
-</script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

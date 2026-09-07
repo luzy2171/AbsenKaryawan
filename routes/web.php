@@ -97,9 +97,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/hapus-user', [PengaturanController::class, 'hapusUserDariMesin'])->name('hapus-user');
             Route::post('/sync-time', [PengaturanController::class, 'synchronizeDeviceTime'])->name('sync-time');
             Route::post('/restart', [PengaturanController::class, 'restartMachine'])->name('restart');
-            Route::post('/upload-fp', [PengaturanController::class, 'uploadSidikJariManual'])->name('upload-fp');
-            Route::post('/hapus-fp', [PengaturanController::class, 'hapusSidikJariManual'])->name('hapus-fp');
-        });
+                                });
         Route::prefix('admin/users')->name('admin.users.')->group(function () {
             Route::get('/', [UserController::class, 'index'])->name('index');
             Route::post('/store', [UserController::class, 'store'])->name('store');

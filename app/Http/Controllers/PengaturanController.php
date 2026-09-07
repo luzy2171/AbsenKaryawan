@@ -51,17 +51,6 @@ class PengaturanController extends Controller
             }
         }
 
-        // Fitur 3: Aksi download Template Sidik Jari
-        if ($request->has('download_fp')) {
-            $startTime = microtime(true);
-            $templates = []; // Not supported by zkteco
-            
-            // Update status mesin
-            if ($primaryMachine) {
-                $responseTime = round((microtime(true) - $startTime) * 1000);
-                $primaryMachine->updateStatus(!empty($templates), $responseTime);
-            }
-        }
 
         return view('pengaturan.index', compact('users', 'logs', 'templates', 'machineStatuses', 'currentMachine'));
     }
@@ -237,48 +226,4 @@ class PengaturanController extends Controller
     /**
      * Fitur 8: Memproses Upload Template Sidik Jari secara Manual via Pengaturan
      */
-    public function uploadSidikJariManual(Request $request, ZktecoService $zkService)
-    {
-        $request->validate([
-            'user_id' => 'required',
-            'finger_id' => 'required',
-            'template' => 'required'
-        ]);
-
-        $result = $zkService->uploadSidikJari(
-            $request->input('user_id'),
-            $request->input('finger_id'),
-            $request->input('template')
-        );
-
-        if ($result === "Koneksi Gagal") return back()->with('error', 'Gagal terhubung ke mesin.');
-        
-        // Log audit
-        AuditLogger::machineUploadFingerprint($request->input('user_id'), $request->input('finger_id'));
-        
-        return back()->with('status', 'Template sidik jari berhasil diunggah ke perangkat! Respon: ' . $result);
     }
-
-    /**
-     * Fitur 9: Memproses Hapus Template Sidik Jari secara Manual via Pengaturan
-     */
-    public function hapusSidikJariManual(Request $request, ZktecoService $zkService)
-    {
-        $request->validate([
-            'user_id' => 'required',
-            'finger_id' => 'required'
-        ]);
-
-        $result = $zkService->deleteSidikJari(
-            $request->input('user_id'),
-            $request->input('finger_id')
-        );
-
-        if ($result === "Koneksi Gagal") return back()->with('error', 'Gagal terhubung ke mesin.');
-        
-        // Log audit
-        AuditLogger::machineDeleteFingerprint($request->input('user_id'), $request->input('finger_id'));
-        
-        return back()->with('status', 'Template sidik jari berhasil dihapus dari perangkat! Respon: ' . $result);
-    }
-}
