@@ -198,6 +198,14 @@ class LeaveController extends Controller
 
     private function syncLeaveToAttendance(Leave $leave)
     {
+        $statusMap = [
+            'Cuti' => 'Cuti',
+            'Sakit' => 'Sakit',
+            'Izin' => 'Izin',
+        ];
+
+        $attendanceStatus = $statusMap[$leave->jenis] ?? 'Izin';
+
         $start = Carbon::parse($leave->tanggal_mulai);
         $end = Carbon::parse($leave->tanggal_selesai);
 
@@ -215,7 +223,7 @@ class LeaveController extends Controller
 
             if ($attendance) {
                 $attendance->update([
-                    'status' => $leave->jenis,
+                    'status' => $attendanceStatus,
                     'jam_masuk' => null,
                     'jam_pulang' => null,
                     'verifikasi' => 'Sistem (Izin)'
@@ -226,10 +234,9 @@ class LeaveController extends Controller
                     'tanggal' => $date,
                     'jam_masuk' => null,
                     'jam_pulang' => null,
-                    'status' => $leave->jenis,
+                    'status' => $attendanceStatus,
                     'verifikasi' => 'Sistem (Izin)'
                 ]);
             }
         }
     }
-}
