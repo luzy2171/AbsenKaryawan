@@ -110,10 +110,12 @@ class AbsensiController extends Controller
                 $absensiService->setConnection($m->machine_ip, $m->username, $m->password, $m->port);
                 $logs = $absensiService->downloadLogTigaBulan();
                 $rawLogs = array_merge($rawLogs, (array)$logs);
+                $m->updateStatus(!empty($logs));
             } elseif ($m->machine_type == 'solution') {
                 $zktecoService->setConnection($m->machine_ip, $m->port);
                 $logs = $zktecoService->downloadLogTigaBulan();
                 $rawLogs = array_merge($rawLogs, (array)$logs);
+                $m->updateStatus(!empty($logs));
             }
         }
         
@@ -123,11 +125,6 @@ class AbsensiController extends Controller
 
         // Hitung response time
         $responseTime = round((microtime(true) - $startTime) * 1000); // dalam ms
-        
-        // Update status mesin menjadi online jika berhasil ambil data
-        if ($machineStatus) {
-            $machineStatus->updateStatus(true, $responseTime);
-        }
 
         // 2. AMBIL PARAMETER DINAMIS DARI DATABASE SETTINGS (DENGAN FALLBACK DEFAULT)
         $jamMasukSetting = DB::table('settings')->where('key', 'jam_masuk')->value('value') ?? '08:00';
