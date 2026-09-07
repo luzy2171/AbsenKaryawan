@@ -41,14 +41,6 @@
                 @endif
 <li class="nav-item"><a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}" href="{{ url('/admin/settings') }}"><i class="bi bi-clock-history me-2"></i> Set Jam Kerja</a></li>
                 <li class="nav-item"><a class="nav-link {{ request()->is('pengaturan*') ? 'active' : '' }}" href="{{ url('/pengaturan') }}"><i class="bi bi-gear me-2"></i> Kontrol Mesin</a></li>
-                        <!-- DYNAMIC MESIN SIDEBAR MENU -->
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->is('admin/mesin-absensi*') ? 'active' : '' }}"
-                                href="{{ route('admin.mesin.index') }}">
-                                <i class="bi bi-diagram-3 me-2"></i> Kontrol Pusat All Vendor
-                            </a>
-                        </li>
-                        <!-- END DYNAMIC MESIN -->
                 <li class="nav-item">
                     <a class="nav-link {{ request()->is('admin/maintenance*') ? 'active' : '' }}" href="{{ route('admin.maintenance.index') }}">
                         <i class="bi bi-database-fill-gear me-2"></i> Maintenance DB
