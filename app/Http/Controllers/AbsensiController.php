@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use App\Models\Karyawan;
 use App\Models\Attendance;
 use App\Models\Lembur;
-use App\Services\HikvisionService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
@@ -98,7 +97,7 @@ class AbsensiController extends Controller
     /**
      * PERBAIKAN LOGIKA: Memproses Penarikan Data Log Mesin Berdasarkan Pengaturan Jam Kerja Dinamis (ANTI-DUPLIKASI)
      */
-    public function tarikDataDariMesin(HikvisionService $absensiService, \App\Services\ZktecoService $zktecoService)
+    public function tarikDataDariMesin(\App\Services\ZktecoService $zktecoService)
     {
         $startTime = microtime(true);
         $rawLogs = [];
@@ -106,17 +105,10 @@ class AbsensiController extends Controller
 
         // 1. Tarik log absensi dari seluruh perangkat yang terdaftar di database
         foreach ($machines as $m) {
-            if ($m->machine_type == 'hikvision') {
-                $absensiService->setConnection($m->machine_ip, $m->username, $m->password, $m->port);
-                $logs = $absensiService->downloadLogTigaBulan();
-                $rawLogs = array_merge($rawLogs, (array)$logs);
-                $m->updateStatus(!empty($logs));
-            } elseif ($m->machine_type == 'solution') {
-                $zktecoService->setConnection($m->machine_ip, $m->port);
-                $logs = $zktecoService->downloadLogTigaBulan();
-                $rawLogs = array_merge($rawLogs, (array)$logs);
-                $m->updateStatus(!empty($logs));
-            }
+            $zktecoService->setConnection($m->machine_ip, $m->port);
+            $logs = $zktecoService->downloadLogTigaBulan();
+            $rawLogs = array_merge($rawLogs, (array)$logs);
+            $m->updateStatus(!empty($logs));
         }
         
         if (empty($rawLogs)) {

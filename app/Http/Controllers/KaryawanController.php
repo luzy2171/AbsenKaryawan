@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Karyawan;
-use App\Services\HikvisionService;
 use App\Helpers\AuditLogger;
 
 class KaryawanController extends Controller
@@ -21,7 +20,7 @@ class KaryawanController extends Controller
     /**
      * Menyimpan karyawan baru ke Database Web dan Mesin Absensi Fisik
      */
-    public function store(Request $request, HikvisionService $absensiService)
+    public function store(Request $request)
     {
         if (!auth()->user()->canEdit()) {
             abort(403, 'Akses ditolak. Role Anda tidak dapat menambah karyawan.');
@@ -42,32 +41,28 @@ class KaryawanController extends Controller
             'status'      => 'Aktif'
         ]);
 
-        // 3. Otomatis kirim data nama dan PIN ke mesin absensi fisik via SOAP Service
-        $absensiService->uploadNama($request->id_karyawan, $request->nama);
-
         // Log audit
         AuditLogger::karyawanCreated($karyawan);
 
-        return redirect()->route('karyawan.index')->with('status', 'Karyawan berhasil ditambahkan ke Web dan Mesin Absensi.');
+        return redirect()->route('karyawan.index')->with('status', 'Karyawan berhasil ditambahkan ke Web.');
     }
 
     /**
      * FITUR BARU: Sinkronisasi Otomatis Semua User dari Perangkat ke Database Web
      */
-    public function syncDariMesin(HikvisionService $absensiService, \App\Services\ZktecoService $zktecoService)
+    public function syncDariMesin(\App\Services\ZktecoService $zktecoService)
     {
         // Track waktu mulai untuk response time
         $startTime = microtime(true);
         
         // 1. Ambil seluruh data user yang ada di memori mesin
-        $hikUsers = $absensiService->getAllUsers();
         $zkUsers = $zktecoService->getAllUsers();
-        
-        // Gabungkan data user, cegah duplikasi berdasarkan pin/user_id
+
+        // Data user dari mesin (ZKTeco only)
         $usersDariMesin = [];
         $uniquePins = [];
-        
-        foreach (array_merge((array)$hikUsers, (array)$zkUsers) as $user) {
+
+        foreach ((array)$zkUsers as $user) {
             if (!in_array($user['pin'], $uniquePins)) {
                 $uniquePins[] = $user['pin'];
                 $usersDariMesin[] = $user;
@@ -76,7 +71,7 @@ class KaryawanController extends Controller
 
         // Update status mesin berdasarkan hasil koneksi
         $machineStatus = \App\Models\MachineStatus::first();
-        
+
         if (empty($usersDariMesin)) {
             // Update status mesin menjadi offline
             if ($machineStatus) {
@@ -116,9 +111,9 @@ class KaryawanController extends Controller
     }
 
     /**
-     * Menghapus karyawan dari Web dan Mesin Absensi Fisik
+     * Menghapus karyawan dari Web
      */
-    public function destroy($id, HikvisionService $absensiService)
+    public function destroy($id)
     {
         if (!auth()->user()->isTrueApprover()) {
             abort(403, 'Akses ditolak. Hanya Approver dan Superadmin yang dapat menghapus karyawan.');
@@ -126,15 +121,12 @@ class KaryawanController extends Controller
 
         $karyawan = Karyawan::findOrFail($id);
 
-        // 1. Hapus user dari mesin absensi fisik berdasarkan PIN/ID-nya
-        $absensiService->hapusUser($karyawan->id_karyawan);
-
         // Log audit before delete
         AuditLogger::karyawanDeleted($karyawan);
 
         // 2. Hapus dari database website
         $karyawan->delete();
 
-        return back()->with('status', 'Data karyawan di web dan mesin fisik berhasil dihapus.');
+        return back()->with('status', 'Data karyawan di web berhasil dihapus.');
     }
 }

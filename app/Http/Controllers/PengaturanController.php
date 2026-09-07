@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Services\HikvisionService;
+use App\Services\ZktecoService;
 use App\Helpers\AuditLogger;
 use App\Models\MachineStatus;
 
@@ -12,7 +12,7 @@ class PengaturanController extends Controller
     /**
      * Mengakses Halaman Dashboard Menu Pengaturan Alat
      */
-    public function index(HikvisionService $absensiService, Request $request)
+    public function index(ZktecoService $zkService, Request $request)
     {
         // Ambil semua machine status
         $machineStatuses = MachineStatus::all();
@@ -30,7 +30,7 @@ class PengaturanController extends Controller
         // Fitur 1: Aksi tampilkan list User dari Mesin (Otomatis load)
         if ($shouldViewUsers) {
             $startTime = microtime(true);
-            $users = $absensiService->getAllUsers();
+            $users = $zkService->getAllUsers();
             
             // Update status mesin
             if ($primaryMachine) {
@@ -42,7 +42,7 @@ class PengaturanController extends Controller
         // Fitur 2: Aksi tampilkan Log Mentah Gabungan Nama dari Mesin
         if ($request->has('view_logs')) {
             $startTime = microtime(true);
-            $logs = $absensiService->downloadLogDenganNama();
+            $logs = $zkService->downloadLogTigaBulan();
             
             // Update status mesin
             if ($primaryMachine) {
@@ -54,7 +54,7 @@ class PengaturanController extends Controller
         // Fitur 3: Aksi download Template Sidik Jari
         if ($request->has('download_fp')) {
             $startTime = microtime(true);
-            $templates = $absensiService->getFingerprintTemplate(
+            $templates = [] /* not supported by zkteco */; //
                 $request->input('user_id', '1'),
                 $request->input('finger_id', '0')
             );
@@ -168,9 +168,9 @@ class PengaturanController extends Controller
     /**
      * Fitur 4: Proses Kosongkan Log Transaksi Mesin Absensi
      */
-    public function clearMachineLogs(HikvisionService $absensiService)
+    public function clearMachineLogs(ZktecoService $zkService)
     {
-        $result = $absensiService->clearLogData();
+        $result = $zkService->clearLogData();
 
         if ($result === "Koneksi Gagal") {
             return back()->with('error', 'Gagal terhubung dengan mesin absensi.');
@@ -185,13 +185,13 @@ class PengaturanController extends Controller
     /**
      * Fitur 5: Proses Hapus User Langsung dari Menu Pengaturan
      */
-    public function hapusUserDariMesin(Request $request, HikvisionService $absensiService)
+    public function hapusUserDariMesin(Request $request, ZktecoService $zkService)
     {
         $request->validate([
             'user_id' => 'required'
         ]);
 
-        $result = $absensiService->hapusUser($request->input('user_id'));
+        $result = $zkService->hapusUser($request->input('user_id'));
 
         if ($result === "Koneksi Gagal") {
             return back()->with('error', 'Gagal terhubung dengan mesin absensi.');
@@ -206,9 +206,9 @@ class PengaturanController extends Controller
     /**
      * Fitur 6: Memproses Sinkronisasi Waktu Server ke Perangkat Absensi Fisik
      */
-    public function synchronizeDeviceTime(HikvisionService $absensiService)
+    public function synchronizeDeviceTime(ZktecoService $zkService)
     {
-        $result = $absensiService->syncTime();
+        $result = $zkService->syncTime();
 
         if ($result === "Koneksi Gagal") {
             return back()->with('error', 'Gagal menyamakan waktu. Koneksi ke mesin terputus.');
@@ -223,9 +223,9 @@ class PengaturanController extends Controller
     /**
      * Fitur 7: Memproses Perintah Restart Mesin Absensi Fisik
      */
-    public function restartMachine(HikvisionService $absensiService)
+    public function restartMachine(ZktecoService $zkService)
     {
-        $result = $absensiService->restartDevice();
+        $result = $zkService->restartDevice();
 
         if ($result === "Koneksi Gagal") {
             return back()->with('error', 'Gagal merestart perangkat. Koneksi ke mesin terputus.');
@@ -240,7 +240,7 @@ class PengaturanController extends Controller
     /**
      * Fitur 8: Memproses Upload Template Sidik Jari secara Manual via Pengaturan
      */
-    public function uploadSidikJariManual(Request $request, HikvisionService $absensiService)
+    public function uploadSidikJariManual(Request $request, ZktecoService $zkService)
     {
         $request->validate([
             'user_id' => 'required',
@@ -248,7 +248,7 @@ class PengaturanController extends Controller
             'template' => 'required'
         ]);
 
-        $result = $absensiService->uploadSidikJari(
+        $result = $zkService->uploadSidikJari(
             $request->input('user_id'),
             $request->input('finger_id'),
             $request->input('template')
@@ -265,14 +265,14 @@ class PengaturanController extends Controller
     /**
      * Fitur 9: Memproses Hapus Template Sidik Jari secara Manual via Pengaturan
      */
-    public function hapusSidikJariManual(Request $request, HikvisionService $absensiService)
+    public function hapusSidikJariManual(Request $request, ZktecoService $zkService)
     {
         $request->validate([
             'user_id' => 'required',
             'finger_id' => 'required'
         ]);
 
-        $result = $absensiService->deleteSidikJari(
+        $result = $zkService->deleteSidikJari(
             $request->input('user_id'),
             $request->input('finger_id')
         );

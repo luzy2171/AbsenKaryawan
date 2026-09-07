@@ -157,8 +157,6 @@
                                     <label class="form-label text-muted small fw-bold mb-1">1. Pilih Mesin Tujuan</label>
                                     <select class="form-select bg-light border-0" name="mesin_tujuan" id="kirim_mesin_tujuan" required>
                                         <option value="">-- Mesin Tujuan --</option>
-                                        <option value="all">Semua Mesin (HIK & Solution)</option>
-                                        <option value="hikvision">Hanya Hikvision</option>
                                         <option value="solution">Hanya Solution</option>
                                     </select>
                                 </div>
@@ -186,8 +184,6 @@
                                 <div class="mb-3">
                                     <select class="form-select bg-light border-0" name="mesin_tujuan" required>
                                         <option value="">-- Mesin Sumber --</option>
-                                        <option value="all">Semua Mesin (HIK & Solution)</option>
-                                        <option value="hikvision">Hanya Hikvision</option>
                                         <option value="solution">Hanya Solution</option>
                                     </select>
                                 </div>
@@ -200,64 +196,7 @@
                 </div>
             </div>
 
-            <!-- Real-Time Event & Controlled -->
-            <div class="row g-4 mb-4 fade-in">
-                <div class="col-12">
-                    <div class="card border-0 shadow-sm rounded-4 h-auto">
-                        <div class="card-header bg-dark text-white border-bottom-0 pt-3 pb-2 px-4 rounded-top-4 d-flex justify-content-between align-items-center">
-                            <h6 class="fw-bold m-0"><i class="bi bi-shield-lock me-2"></i>Real-Time Event & Controlled</h6>
-                            <span class="badge bg-secondary rounded-pill" style="font-size: 10px;">Hikvision Only</span>
-                        </div>
-                        <div class="card-body p-4">
-                            <p class="text-muted small mb-3">Kontrol akses pintu dari jarak jauh dan pantau log aktivitas pintu secara real-time.</p>
-                            
-                            <div class="row g-3 mb-4">
-                                <div class="col-md-9">
-                                    <select class="form-select bg-light border-0" id="live_machine_id">
-                                        <option value="">-- Pilih Pintu Hikvision untuk Dipantau --</option>
-                                        @foreach($machines->where('machine_type', 'hikvision') as $m)
-                                            <option value="{{ $m->id }}">{{ $m->machine_name }} ({{ $m->machine_ip }})</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-3">
-                                    <form action="{{ route('admin.mesin.door.open') }}" method="POST" id="doorOpenForm" onsubmit="return submitDoorOpen(event);">
-                                        @csrf
-                                        <input type="hidden" name="machine_id" id="door_machine_id">
-                                        <button type="submit" class="btn btn-warning w-100 fw-bold rounded-3 text-dark shadow-sm" id="btnOpenDoor" disabled>
-                                            <i class="bi bi-unlock-fill me-2"></i> BUKA PINTU
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-
-                            <div class="table-responsive bg-light rounded-3 p-1">
-                                <table class="table table-borderless table-hover align-middle mb-0" style="font-size: 13px;">
-                                    <thead class="text-muted" style="border-bottom: 2px solid #e9ecef;">
-                                        <tr>
-                                            <th class="fw-semibold pb-2 ps-3">TIME</th>
-                                            <th class="fw-semibold pb-2">EVENT TYPES</th>
-                                            <th class="fw-semibold pb-2">NAME</th>
-                                            <th class="fw-semibold pb-2">EMP. ID</th>
-                                            <th class="fw-semibold pb-2">VERIFY</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="liveEventTable">
-                                        <tr>
-                                            <td colspan="5" class="text-center py-4 text-muted">
-                                                <i class="bi bi-activity fs-3 d-block mb-2 opacity-50"></i>
-                                                Pilih mesin di atas untuk mulai memantau <strong>Real-Time Events</strong>.
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Data User di Mesin (Tab Layout) -->
+            <!-- Data User di Mesin -->
             <div class="row g-4 mb-4 fade-in">
                 <div class="col-12">
                     <div class="card border-0 shadow-sm rounded-4 h-100">
@@ -265,99 +204,7 @@
                             <h6 class="fw-bold m-0"><i class="bi bi-people text-primary me-2"></i>Data Karyawan di Mesin Fisik</h6>
                         </div>
                         <div class="card-body p-0">
-                            <!-- Nav tabs -->
-                            <ul class="nav nav-tabs px-4 border-bottom-0" id="mesinTab" role="tablist">
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link active fw-semibold text-dark pb-3 border-0 border-bottom border-3 border-primary" id="hik-tab" data-bs-toggle="tab" data-bs-target="#hik" type="button" role="tab">
-                                        <i class="bi bi-person-bounding-box me-1"></i> Hikvision <span class="badge bg-dark ms-1">{{ $totalHik }}</span>
-                                    </button>
-                                </li>
-                                <li class="nav-item" role="presentation">
-                                    <button class="nav-link fw-semibold text-muted pb-3 border-0" id="sol-tab" data-bs-toggle="tab" data-bs-target="#sol" type="button" role="tab" onclick="this.classList.add('text-dark', 'border-bottom', 'border-3', 'border-primary'); this.classList.remove('text-muted'); document.getElementById('hik-tab').classList.remove('text-dark', 'border-bottom', 'border-3', 'border-primary'); document.getElementById('hik-tab').classList.add('text-muted');">
-                                        <i class="bi bi-fingerprint me-1"></i> Solution <span class="badge bg-primary ms-1">{{ $totalSol }}</span>
-                                    </button>
-                                </li>
-                            </ul>
-
-                            <!-- Tab panes -->
-                            <div class="tab-content" id="mesinTabContent">
-                                <!-- Tab Hikvision -->
-                                <div class="tab-pane fade show active" id="hik" role="tabpanel">
-                                    <div class="d-flex justify-content-end p-3 bg-light border-bottom">
-                                        <form action="{{ route('admin.mesin.clean', 'hikvision') }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus SEMUA user di mesin Hikvision yang tidak terdaftar di database Web? (Visitor, data lama, dll)');">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-danger fw-semibold shadow-sm">
-                                                <i class="bi bi-stars me-1"></i> Bersihkan Data Asing (Auto-Hapus)
-                                            </button>
-                                        </form>
-                                    </div>
-                                    <div class="table-responsive">
-                                        <table class="table table-hover align-middle mb-0">
-                                            <thead class="table-light text-secondary">
-                                                <tr>
-                                                    <th class="ps-4 fw-semibold small" style="width: 20%;">PIN / ID</th>
-                                                    <th class="fw-semibold small" style="width: 40%;">NAMA DI MESIN</th>
-                                                    <th class="fw-semibold small text-center" style="width: 20%;">STATUS LOKAL DB</th>
-                                                    <th class="fw-semibold small text-center pe-4" style="width: 20%;">AKSI</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @forelse($usersHik as $u)
-                                                    @php $isLocal = $karyawans->where('id_karyawan', (string)$u['pin'])->first(); @endphp
-                                                    <tr>
-                                                        <td class="ps-4 fw-bold {{ $isLocal ? 'text-dark' : 'text-danger' }}">{{ $u['pin'] }}</td>
-                                                        <td>{{ $u['name'] ?: '-' }}</td>
-                                                        <td class="text-center">
-                                                            @if($isLocal)
-                                                                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Sinkron</span>
-                                                            @else
-                                                                <span class="badge bg-danger-subtle text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Belum di-DB</span>
-                                                            @endif
-                                                        </td>
-                                                        <td class="text-center pe-4">
-                                                            <div class="dropdown">
-                                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                                                    Opsi
-                                                                </button>
-                                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-                                                                    @if($isLocal)
-                                                                        <li>
-                                                                            <button type="button" class="dropdown-item" onclick="editKaryawan({{ $isLocal->id }}, '{{ $isLocal->nama }}', '{{ $isLocal->departemen }}', '{{ $isLocal->jabatan }}')">
-                                                                                <i class="bi bi-pencil-square text-primary me-2"></i> Edit Data Web
-                                                                            </button>
-                                                                        </li>
-                                                                        <li>
-                                                                            <form action="{{ route('admin.mesin.karyawan.db.destroy', $isLocal->id) }}" method="POST" onsubmit="return confirm('Hapus karyawan ini DARI DATABASE WEB saja? (Tetap ada di mesin fisik)');">
-                                                                                @csrf @method('DELETE')
-                                                                                <button type="submit" class="dropdown-item">
-                                                                                    <i class="bi bi-trash text-warning me-2"></i> Hapus dari Web
-                                                                                </button>
-                                                                            </form>
-                                                                        </li>
-                                                                        <li><hr class="dropdown-divider"></li>
-                                                                    @endif
-                                                                    <li>
-                                                                        <form action="{{ route('admin.mesin.hapus', ['mesin' => 'hikvision', 'pin' => $u['pin']]) }}" method="POST" onsubmit="return confirm('Hapus permanen PIN {{ $u['pin'] }} DARI MESIN FISIK HIKVISION?');">
-                                                                            @csrf @method('DELETE')
-                                                                            <button type="submit" class="dropdown-item text-danger">
-                                                                                <i class="bi bi-trash-fill text-danger me-2"></i> Hapus dari Mesin
-                                                                            </button>
-                                                                        </form>
-                                                                    </li>
-                                                                </ul>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                @empty
-                                                    <tr><td colspan="4" class="text-center py-4 text-muted small">Kosong</td></tr>
-                                                @endforelse
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                
-                                <!-- Tab Solution -->
-                                <div class="tab-pane fade" id="sol" role="tabpanel">
+                            <div>
                                     <div class="d-flex justify-content-end p-3 bg-light border-bottom">
                                         <form action="{{ route('admin.mesin.clean', 'solution') }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus SEMUA user di mesin Solution yang tidak terdaftar di database Web?');">
                                             @csrf
@@ -433,12 +280,12 @@
                             </div>
                         </div>
                     </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
         </div>
-    </div>
-</div>
     </div>
 </div>
 
@@ -457,7 +304,6 @@
                         <label class="form-label fw-semibold small text-muted">Vendor / Tipe Mesin</label>
                         <select name="machine_type" class="form-select bg-light border-0" required onchange="updateDefaultPort(this.value)">
                             <option value="solution">Solution / ZKTeco</option>
-                            <option value="hikvision">Hikvision</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -475,13 +321,7 @@
                         </div>
                     </div>
                     
-                    <div id="credentialsArea" style="display: none;">
-                        <hr class="my-4">
-                        <p class="small text-muted mb-3"><i class="bi bi-info-circle me-1"></i>Otorisasi khusus Hikvision SDK</p>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small text-muted">Username</label>
-                            <input type="text" name="username" class="form-control bg-light border-0" placeholder="admin">
-                        </div>
+                    
                         <div class="mb-3">
                             <label class="form-label fw-semibold small text-muted">Password</label>
                             <input type="password" name="password" class="form-control bg-light border-0" placeholder="Password mesin">
@@ -513,7 +353,6 @@
                         <label class="form-label fw-semibold small text-muted">Vendor / Tipe Mesin</label>
                         <select name="machine_type" id="edit_machine_type" class="form-select bg-light border-0" required onchange="updateEditDefaultPort(this.value)">
                             <option value="solution">Solution / ZKTeco</option>
-                            <option value="hikvision">Hikvision</option>
                         </select>
                     </div>
                     <div class="mb-3">
@@ -531,13 +370,7 @@
                         </div>
                     </div>
                     
-                    <div id="editCredentialsArea" style="display: none;">
-                        <hr class="my-4">
-                        <p class="small text-muted mb-3"><i class="bi bi-info-circle me-1"></i>Otorisasi khusus Hikvision SDK</p>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small text-muted">Username</label>
-                            <input type="text" name="username" id="edit_username" class="form-control bg-light border-0">
-                        </div>
+                    
                         <div class="mb-3">
                             <label class="form-label fw-semibold small text-muted">Password (Kosongkan jika tidak diubah)</label>
                             <input type="password" name="password" id="edit_password" class="form-control bg-light border-0">
@@ -602,20 +435,8 @@
         modal.show();
     }
 
-    function updateDefaultPort(val) {
-        if(val === 'hikvision') {
-            document.getElementById('inputPort').value = '80';
-            document.getElementById('credentialsArea').style.display = 'block';
-        } else {
-            document.getElementById('inputPort').value = '4370';
-            document.getElementById('credentialsArea').style.display = 'none';
-        }
-    }
-
-    function updateEditDefaultPort(val) {
-        if(val === 'hikvision') {
-            document.getElementById('editCredentialsArea').style.display = 'block';
-        } else {
+    function updateDefaultPort(val) {}
+function updateEditDefaultPort(val) {} else {
             document.getElementById('editCredentialsArea').style.display = 'none';
         }
     }
@@ -628,7 +449,7 @@
         document.getElementById('edit_port').value = port;
         document.getElementById('edit_username').value = username;
         
-        updateEditDefaultPort(type);
+        
         
         var modal = new bootstrap.Modal(document.getElementById('editDeviceModal'));
         modal.show();
@@ -659,13 +480,9 @@
             let isRegistered = false;
             let pinStr = String(k.id_karyawan);
             
-            if(mesin === 'hikvision') {
-                isRegistered = usersHik.includes(pinStr);
-            } else if(mesin === 'solution') {
+            if(mesin === 'solution') {
                 isRegistered = usersSol.includes(pinStr);
-            } else if(mesin === 'all') {
-                isRegistered = usersHik.includes(pinStr) && usersSol.includes(pinStr);
-            }
+            
 
             if(!isRegistered) {
                 let option = document.createElement('option');
