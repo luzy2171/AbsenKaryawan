@@ -98,13 +98,17 @@ class AbsensiController extends Controller
     /**
      * PERBAIKAN LOGIKA: Memproses Penarikan Data Log Mesin Berdasarkan Pengaturan Jam Kerja Dinamis (ANTI-DUPLIKASI)
      */
-    public function tarikDataDariMesin(HikvisionService $absensiService)
+    public function tarikDataDariMesin(HikvisionService $absensiService, \App\Services\ZktecoService $zktecoService)
     {
         // Track waktu mulai untuk response time
         $startTime = microtime(true);
         
-        // 1. Ambil data log mentah dari mesin via SOAP (Terfilter 3 bulan terakhir)
-        $rawLogs = $absensiService->downloadLogTigaBulan();
+        // 1. Ambil data log mentah dari mesin via SOAP/ISAPI & ZKTeco (Terfilter 3 bulan terakhir)
+        $hikLogs = $absensiService->downloadLogTigaBulan();
+        $zkLogs = $zktecoService->downloadLogTigaBulan();
+
+        // Gabungkan log dari kedua mesin
+        $rawLogs = array_merge((array)$hikLogs, (array)$zkLogs);
 
         // Update status mesin berdasarkan hasil koneksi
         $machineStatus = \App\Models\MachineStatus::first();

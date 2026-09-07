@@ -11,10 +11,10 @@ class HikvisionService
 
     public function __construct()
     {
-        $this->ip = '10.10.10.79';
-        $this->user = 'admin';
-        $this->pass = 'hik12345';
-        $this->port = 80;
+        $this->ip = env('HIKVISION_IP', '10.10.10.79');
+        $this->user = env('HIKVISION_USER', 'admin');
+        $this->pass = env('HIKVISION_PASS', 'hik12345');
+        $this->port = env('HIKVISION_PORT', 80);
     }
 
     public function request($endpoint, $method = 'GET', $data = null)

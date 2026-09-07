@@ -54,13 +54,25 @@ class KaryawanController extends Controller
     /**
      * FITUR BARU: Sinkronisasi Otomatis Semua User dari Perangkat ke Database Web
      */
-    public function syncDariMesin(HikvisionService $absensiService)
+    public function syncDariMesin(HikvisionService $absensiService, \App\Services\ZktecoService $zktecoService)
     {
         // Track waktu mulai untuk response time
         $startTime = microtime(true);
         
         // 1. Ambil seluruh data user yang ada di memori mesin
-        $usersDariMesin = $absensiService->getAllUsers();
+        $hikUsers = $absensiService->getAllUsers();
+        $zkUsers = $zktecoService->getAllUsers();
+        
+        // Gabungkan data user, cegah duplikasi berdasarkan pin/user_id
+        $usersDariMesin = [];
+        $uniquePins = [];
+        
+        foreach (array_merge((array)$hikUsers, (array)$zkUsers) as $user) {
+            if (!in_array($user['pin'], $uniquePins)) {
+                $uniquePins[] = $user['pin'];
+                $usersDariMesin[] = $user;
+            }
+        }
 
         // Update status mesin berdasarkan hasil koneksi
         $machineStatus = \App\Models\MachineStatus::first();
