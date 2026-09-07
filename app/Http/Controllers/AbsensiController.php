@@ -100,24 +100,24 @@ class AbsensiController extends Controller
      */
     public function tarikDataDariMesin(HikvisionService $absensiService, \App\Services\ZktecoService $zktecoService)
     {
-        // Track waktu mulai untuk response time
         $startTime = microtime(true);
-        
-        // 1. Ambil data log mentah dari mesin via SOAP/ISAPI & ZKTeco (Terfilter 3 bulan terakhir)
-        $hikLogs = $absensiService->downloadLogTigaBulan();
-        $zkLogs = $zktecoService->downloadLogTigaBulan();
+        $rawLogs = [];
+        $machines = \App\Models\MachineStatus::all();
 
-        // Gabungkan log dari kedua mesin
-        $rawLogs = array_merge((array)$hikLogs, (array)$zkLogs);
-
-        // Update status mesin berdasarkan hasil koneksi
-        $machineStatus = \App\Models\MachineStatus::first();
+        // 1. Tarik log absensi dari seluruh perangkat yang terdaftar di database
+        foreach ($machines as $m) {
+            if ($m->machine_type == 'hikvision') {
+                $absensiService->setConnection($m->machine_ip, $m->username, $m->password, $m->port);
+                $logs = $absensiService->downloadLogTigaBulan();
+                $rawLogs = array_merge($rawLogs, (array)$logs);
+            } elseif ($m->machine_type == 'solution') {
+                $zktecoService->setConnection($m->machine_ip, $m->port);
+                $logs = $zktecoService->downloadLogTigaBulan();
+                $rawLogs = array_merge($rawLogs, (array)$logs);
+            }
+        }
         
         if (empty($rawLogs)) {
-            // Update status mesin menjadi offline jika gagal ambil data
-            if ($machineStatus) {
-                $machineStatus->updateStatus(false);
-            }
             return back()->with('error', 'Tidak ada data log absensi baru dalam 3 bulan terakhir atau koneksi mesin terputus.');
         }
 
