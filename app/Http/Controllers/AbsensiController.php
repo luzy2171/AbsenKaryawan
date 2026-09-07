@@ -99,19 +99,27 @@ class AbsensiController extends Controller
      */
     public function tarikDataDariMesin(\App\Services\ZktecoService $zktecoService)
     {
-        $startTime = microtime(true);
-        $rawLogs = [];
-        $machines = \App\Models\MachineStatus::all();
-
-        // 1. Tarik log absensi dari seluruh perangkat yang terdaftar di database
-        foreach ($machines as $m) {
-            $zktecoService->setConnection($m->machine_ip, $m->port);
-            $logs = $zktecoService->downloadLogTigaBulan();
-            $rawLogs = array_merge($rawLogs, (array)$logs);
-            $m->updateStatus(!empty($logs));
+        // Cegah eksekusi paralel jika tombol diklik berkali-kali
+        $lock = \Illuminate\Support\Facades\Cache::lock('sync-absensi', 10);
+        if (!$lock->get()) {
+            return back()->with('error', 'Proses sinkronisasi sedang berjalan, harap tunggu.');
         }
+
+        try {
+            $startTime = microtime(true);
+            $rawLogs = [];
+            $machines = \App\Models\MachineStatus::all();
+
+            // 1. Tarik log absensi dari seluruh perangkat yang terdaftar di database
+            foreach ($machines as $m) {
+                $zktecoService->setConnection($m->machine_ip, $m->port);
+                $logs = $zktecoService->downloadLogTigaBulan();
+                $rawLogs = array_merge($rawLogs, (array)$logs);
+                $m->updateStatus(!empty($logs));
+            }
         
         if (empty($rawLogs)) {
+            $lock->release();
             return back()->with('error', 'Tidak ada data log absensi baru dalam 3 bulan terakhir atau koneksi mesin terputus.');
         }
 
@@ -209,6 +217,9 @@ class AbsensiController extends Controller
         AuditLogger::absensiPulled($dataMasukBaru + $dataPulangDiupdate);
 
         return back()->with('status', "Sinkronisasi berhasil! Berhasil menambahkan $dataMasukBaru data masuk baru dan memperbarui $dataPulangDiupdate jam pulang.");
+        } finally {
+            $lock->release();
+        }
     }
 
     /**
