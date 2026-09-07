@@ -343,44 +343,6 @@
     </div>
 </div>
 
-<!-- Modal Sync Karyawan dari Mesin -->
-<div class="modal fade" id="modalSyncMesin" tabindex="-1" aria-labelledby="modalSyncMesinLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold" id="modalSyncMesinLabel">
-                    <i class="bi bi-cloud-download text-success me-2"></i>Tarik Data dari Mesin
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{{ route('admin.mesin.tarik') }}" method="POST">
-                @csrf
-                <div class="modal-body pt-3 pb-4">
-                    <p class="text-muted small mb-3">Tarik seluruh data nama dan PIN karyawan dari memori mesin untuk didaftarkan otomatis ke database web.</p>
-                    <div class="mb-3">
-                        <label class="form-label text-muted small fw-semibold">Pilih Mesin Sumber</label>
-                        <select class="form-select bg-light border-0" name="mesin_tujuan" required>
-                            <option value="">-- Pilih Mesin --</option>
-                            <option value="all">Tarik dari Semua Mesin (Hikvision & Solution)</option>
-                            @php $dynamicMachines = \App\Models\MachineStatus::all(); @endphp
-                            @foreach($dynamicMachines as $m)
-                                <option value="{{ $m->machine_type }}">Hanya {{ $m->machine_name }} ({{ $m->machine_type == 'hikvision' ? 'Hikvision' : 'Solution' }})</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="alert alert-warning border-0 shadow-sm small py-2 mb-0">
-                        <i class="bi bi-exclamation-triangle-fill me-1"></i> Peringatan: Nama-nama asing seperti "Visitor" yang ada di mesin akan ikut masuk ke database.
-                    </div>
-                </div>
-                <div class="modal-footer border-0 pt-0 pb-4 px-4">
-                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal" style="border-radius: 10px;">Batal</button>
-                    <button type="submit" class="btn btn-success px-4 fw-semibold" style="border-radius: 10px;">Mulai Sinkronisasi</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
