@@ -109,11 +109,9 @@
                                         <tr>
                                             <td class="fw-semibold">{{ $m->machine_name }}</td>
                                             <td>
-                                                @if($m->machine_type == 'hikvision')
-                                                    <span class="badge bg-dark text-white"><i class="bi bi-person-bounding-box me-1"></i>Hikvision</span>
-                                                @else
+                                                
                                                     <span class="badge bg-primary text-white"><i class="bi bi-fingerprint me-1"></i>Solution</span>
-                                                @endif
+                                                
                                             </td>
                                             <td class="font-monospace text-muted">{{ $m->machine_ip }}:{{ $m->port }}</td>
                                             <td class="text-center">
@@ -157,6 +155,7 @@
                                     <label class="form-label text-muted small fw-bold mb-1">1. Pilih Mesin Tujuan</label>
                                     <select class="form-select bg-light border-0" name="mesin_tujuan" id="kirim_mesin_tujuan" required>
                                         <option value="">-- Mesin Tujuan --</option>
+                                        
                                         <option value="solution">Hanya Solution</option>
                                     </select>
                                 </div>
@@ -184,6 +183,7 @@
                                 <div class="mb-3">
                                     <select class="form-select bg-light border-0" name="mesin_tujuan" required>
                                         <option value="">-- Mesin Sumber --</option>
+                                        
                                         <option value="solution">Hanya Solution</option>
                                     </select>
                                 </div>
@@ -302,9 +302,7 @@
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label fw-semibold small text-muted">Vendor / Tipe Mesin</label>
-                        <select name="machine_type" class="form-select bg-light border-0" required onchange="updateDefaultPort(this.value)">
-                            <option value="solution">Solution / ZKTeco</option>
-                        </select>
+                        <select name="machine_type" class="form-select bg-light border-0" required><option value="solution">Solution / ZKTeco</option></select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold small text-muted">Nama Perangkat (Bebas)</label>
@@ -351,9 +349,7 @@
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label fw-semibold small text-muted">Vendor / Tipe Mesin</label>
-                        <select name="machine_type" id="edit_machine_type" class="form-select bg-light border-0" required onchange="updateEditDefaultPort(this.value)">
-                            <option value="solution">Solution / ZKTeco</option>
-                        </select>
+                        <select name="machine_type" id="edit_machine_type" class="form-select bg-light border-0" required><option value="solution">Solution / ZKTeco</option></select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold small text-muted">Nama Perangkat</label>
@@ -435,11 +431,9 @@
         modal.show();
     }
 
-    function updateDefaultPort(val) {}
-function updateEditDefaultPort(val) {} else {
-            document.getElementById('editCredentialsArea').style.display = 'none';
-        }
-    }
+     
+
+     
 
     function editDevice(id, name, type, ip, port, username) {
         document.getElementById('editDeviceForm').action = "{{ url('admin/mesin-absensi/device') }}/" + id;
@@ -457,7 +451,7 @@ function updateEditDefaultPort(val) {} else {
 
     // Data sinkronisasi untuk fitur Kirim Data Pintar
     const localKaryawans = @json($karyawans);
-    const usersHik = @json(array_column((array)$usersHik, 'pin'));
+    
     const usersSol = @json(array_column((array)$usersSol, 'pin'));
 
     const selectMesinKirim = document.getElementById('kirim_mesin_tujuan');
@@ -482,7 +476,7 @@ function updateEditDefaultPort(val) {} else {
             
             if(mesin === 'solution') {
                 isRegistered = usersSol.includes(pinStr);
-            
+            }
 
             if(!isRegistered) {
                 let option = document.createElement('option');
@@ -499,77 +493,6 @@ function updateEditDefaultPort(val) {} else {
         }
     });
 
-    // Real-Time Event Polling
-    let pollingInterval = null;
-    const selectMachine = document.getElementById('live_machine_id');
-    const btnOpenDoor = document.getElementById('btnOpenDoor');
-    const hiddenMachineId = document.getElementById('door_machine_id');
-    const tableBody = document.getElementById('liveEventTable');
-
-    function submitDoorOpen(e) {
-        if (!hiddenMachineId.value) {
-            e.preventDefault();
-            alert("Pilih mesin terlebih dahulu!");
-            return false;
-        }
-        return confirm('Yakin ingin membuka pintu secara remote?');
-    }
-
-    function fetchEvents(machineId) {
-        fetch("{{ route('admin.mesin.door.events') }}?machine_id=" + machineId)
-            .then(response => response.json())
-            .then(data => {
-                if(data.events && data.events.length > 0) {
-                    tableBody.innerHTML = '';
-                    data.events.forEach(evt => {
-                        let colorClass = 'text-dark';
-                        let icon = 'bi-record-circle';
-                        
-                        if (evt.event_type.includes('Unlocked') || evt.event_type.includes('Login')) {
-                            colorClass = 'text-success'; icon = 'bi-unlock';
-                        } else if (evt.event_type.includes('Locked')) {
-                            colorClass = 'text-danger'; icon = 'bi-lock';
-                        } else if (evt.event_type.includes('Button')) {
-                            colorClass = 'text-warning'; icon = 'bi-box-arrow-right';
-                        } else if (evt.event_type.includes('Authenticated')) {
-                            colorClass = 'text-primary'; icon = 'bi-person-check';
-                        }
-
-                        let row = `<tr>
-                            <td class="text-muted">\${evt.time}</td>
-                            <td class="fw-semibold \${colorClass}"><i class="bi \${icon} me-1"></i>\${evt.event_type}</td>
-                            <td class="fw-bold">\${evt.name !== 'unknown' && evt.name !== '-' ? evt.name : '<span class="text-muted">--</span>'}</td>
-                            <td class="text-muted">\${evt.employee_id !== 'unknown' && evt.employee_id !== '-' ? evt.employee_id : '--'}</td>
-                            <td class="text-muted">\${evt.verify_mode !== 'invalid' && evt.verify_mode !== '-' ? evt.verify_mode.replace('faceOrFpOrCardOrPw', 'Multi-Verify').replace('fingerprint', 'Fingerprint') : '--'}</td>
-                        </tr>`;
-                        tableBody.innerHTML += row;
-                    });
-                } else if(data.events && data.events.length === 0) {
-                    tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-muted">Belum ada event hari ini.</td></tr>`;
-                }
-            })
-            .catch(error => {
-                console.error("Error fetching events:", error);
-            });
-    }
-
-    selectMachine.addEventListener('change', function() {
-        if(pollingInterval) clearInterval(pollingInterval);
-        
-        const machineId = this.value;
-        if(machineId) {
-            btnOpenDoor.disabled = false;
-            hiddenMachineId.value = machineId;
-            tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Memuat data live...</td></tr>`;
-            
-            fetchEvents(machineId); // Initial fetch
-            pollingInterval = setInterval(() => fetchEvents(machineId), 3000); // Poll every 3 seconds
-        } else {
-            btnOpenDoor.disabled = true;
-            hiddenMachineId.value = '';
-            tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted"><i class="bi bi-activity fs-3 d-block mb-2 opacity-50"></i>Pilih mesin di atas untuk mulai memantau *Real-Time Events*.</td></tr>`;
-        }
-    });
-</script>
+    </script>
 </body>
 </html>
