@@ -16,6 +16,10 @@ class MachineStatus extends Model
     protected $fillable = [
         'machine_ip',
         'machine_name',
+        'machine_type',
+        'port',
+        'username',
+        'password',
         'status',
         'last_ping',
         'response_time',

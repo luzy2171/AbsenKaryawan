@@ -61,6 +61,9 @@ Route::middleware('auth')->group(function () {
     // 4. Aksi Operasional (Admin ke atas)
     Route::middleware('admin')->group(function () {
         Route::get('admin/mesin-absensi', [MesinAbsensiController::class, 'index'])->name('admin.mesin.index');
+        Route::post('admin/mesin-absensi/device', [MesinAbsensiController::class, 'storeDevice'])->name('admin.mesin.device.store');
+        Route::delete('admin/mesin-absensi/device/{id}', [MesinAbsensiController::class, 'destroyDevice'])->name('admin.mesin.device.destroy');
+        Route::post('admin/mesin-absensi/device/{id}/ping', [MesinAbsensiController::class, 'pingDevice'])->name('admin.mesin.device.ping');
         Route::post('admin/mesin-absensi/tarik', [MesinAbsensiController::class, 'tarikDataAll'])->name('admin.mesin.tarik');
         Route::post('admin/mesin-absensi/kirim', [MesinAbsensiController::class, 'kirimData'])->name('admin.mesin.kirim');
         Route::delete('admin/mesin-absensi/hapus/{mesin}/{pin}', [MesinAbsensiController::class, 'hapusData'])->name('admin.mesin.hapus');

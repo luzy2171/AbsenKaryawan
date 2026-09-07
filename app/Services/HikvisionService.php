@@ -17,6 +17,15 @@ class HikvisionService
         $this->port = env('HIKVISION_PORT', 80);
     }
 
+    public function setConnection($ip, $user, $pass, $port = 80)
+    {
+        $this->ip = $ip;
+        $this->user = $user;
+        $this->pass = $pass;
+        $this->port = $port;
+        return $this;
+    }
+
     public function request($endpoint, $method = 'GET', $data = null)
     {
         $url = "http://{$this->ip}:{$this->port}{$endpoint}";

@@ -88,6 +88,70 @@
             @endif
 
             <div class="row g-4 mb-4 fade-in">
+                <!-- System Monitoring & Management -->
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4">
+                        <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold m-0"><i class="bi bi-activity text-danger me-2"></i>System Monitoring & Devices</h6>
+                            <button class="btn btn-sm btn-primary fw-semibold rounded-3" data-bs-toggle="modal" data-bs-target="#addDeviceModal">
+                                <i class="bi bi-plus-lg me-1"></i> Tambah Perangkat
+                            </button>
+                        </div>
+                        <div class="card-body px-4 pb-4 pt-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light text-secondary">
+                                        <tr>
+                                            <th class="small fw-semibold">NAMA PERANGKAT</th>
+                                            <th class="small fw-semibold">VENDOR / TIPE</th>
+                                            <th class="small fw-semibold">IP ADDRESS</th>
+                                            <th class="small fw-semibold text-center">STATUS</th>
+                                            <th class="small fw-semibold">LAST PING</th>
+                                            <th class="small fw-semibold">RESPONSE</th>
+                                            <th class="small fw-semibold text-end pe-3">AKSI</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($machines as $m)
+                                        <tr>
+                                            <td class="fw-semibold">{{ $m->machine_name }}</td>
+                                            <td>
+                                                @if($m->machine_type == 'hikvision')
+                                                    <span class="badge bg-dark text-white"><i class="bi bi-person-bounding-box me-1"></i>Hikvision</span>
+                                                @else
+                                                    <span class="badge bg-primary text-white"><i class="bi bi-fingerprint me-1"></i>Solution</span>
+                                                @endif
+                                            </td>
+                                            <td class="font-monospace text-muted">{{ $m->machine_ip }}:{{ $m->port }}</td>
+                                            <td class="text-center">
+                                                <span class="badge {{ $m->getStatusBadgeClass() }} rounded-pill px-3">{{ $m->getStatusLabel() }}</span>
+                                            </td>
+                                            <td class="small text-muted">{{ $m->getLastPingHuman() }}</td>
+                                            <td class="small text-muted">{{ $m->getFormattedResponseTime() }}</td>
+                                            <td class="text-end pe-3">
+                                                <form action="{{ route('admin.mesin.device.ping', $m->id) }}" method="POST" class="d-inline">
+                                                    @csrf
+                                                    <button type="submit" class="btn btn-sm btn-outline-success border-0 me-1" title="Ping Koneksi"><i class="bi bi-broadcast"></i></button>
+                                                </form>
+                                                <form action="{{ route('admin.mesin.device.destroy', $m->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus perangkat {{ $m->machine_name }}?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Hapus Perangkat"><i class="bi bi-trash"></i></button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        @empty
+                                        <tr><td colspan="7" class="text-center py-4 text-muted">Belum ada perangkat yang ditambahkan.</td></tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4 fade-in">
                 <!-- Aksi Global / Central Control -->
                 <div class="col-md-4">
                     <div class="card border-0 shadow-sm rounded-4 h-100">
@@ -243,6 +307,72 @@
     </div>
 </div>
 
+<!-- Modal Add Device -->
+<div class="modal fade" id="addDeviceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-hdd-network me-2"></i>Tambah Perangkat Baru</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ route('admin.mesin.device.store') }}" method="POST">
+                @csrf
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Vendor / Tipe Mesin</label>
+                        <select name="machine_type" class="form-select bg-light border-0" required onchange="updateDefaultPort(this.value)">
+                            <option value="solution">Solution / ZKTeco</option>
+                            <option value="hikvision">Hikvision</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Nama Perangkat (Bebas)</label>
+                        <input type="text" name="machine_name" class="form-control bg-light border-0" placeholder="Contoh: Solution Pintu Depan" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-8">
+                            <label class="form-label fw-semibold small text-muted">IP Address</label>
+                            <input type="text" name="machine_ip" class="form-control bg-light border-0" placeholder="192.168.1.xxx" required>
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fw-semibold small text-muted">Port</label>
+                            <input type="number" name="port" id="inputPort" class="form-control bg-light border-0" value="4370" required>
+                        </div>
+                    </div>
+                    
+                    <div id="credentialsArea" style="display: none;">
+                        <hr class="my-4">
+                        <p class="small text-muted mb-3"><i class="bi bi-info-circle me-1"></i>Otorisasi khusus Hikvision SDK</p>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted">Username</label>
+                            <input type="text" name="username" class="form-control bg-light border-0" placeholder="admin">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-muted">Password</label>
+                            <input type="password" name="password" class="form-control bg-light border-0" placeholder="Password mesin">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light px-4 rounded-3 fw-semibold" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary px-4 rounded-3 fw-bold">Simpan Perangkat</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    function updateDefaultPort(val) {
+        if(val === 'hikvision') {
+            document.getElementById('inputPort').value = '80';
+            document.getElementById('credentialsArea').style.display = 'block';
+        } else {
+            document.getElementById('inputPort').value = '4370';
+            document.getElementById('credentialsArea').style.display = 'none';
+        }
+    }
+</script>
 </body>
 </html>

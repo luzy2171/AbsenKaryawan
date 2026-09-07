@@ -17,6 +17,13 @@ class ZktecoService
         $this->port = env('ZKTECO_PORT', 4370);
     }
 
+    public function setConnection($ip, $port = 4370)
+    {
+        $this->ip = $ip;
+        $this->port = $port;
+        return $this;
+    }
+
     public function connect()
     {
         $zk = new ZKTeco($this->ip, $this->port);
