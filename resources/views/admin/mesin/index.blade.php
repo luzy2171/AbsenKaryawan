@@ -317,10 +317,37 @@
                                                             @endif
                                                         </td>
                                                         <td class="text-center pe-4">
-                                                            <form action="{{ route('admin.mesin.hapus', ['mesin' => 'hikvision', 'pin' => $u['pin']]) }}" method="POST" onsubmit="return confirm('Hapus permanen PIN {{ $u['pin'] }} dari Hikvision?');">
-                                                                @csrf @method('DELETE')
-                                                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Hapus</button>
-                                                            </form>
+                                                            <div class="dropdown">
+                                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                                    Opsi
+                                                                </button>
+                                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                                                    @if($isLocal)
+                                                                        <li>
+                                                                            <button type="button" class="dropdown-item" onclick="editKaryawan({{ $isLocal->id }}, '{{ $isLocal->nama }}', '{{ $isLocal->departemen }}', '{{ $isLocal->jabatan }}')">
+                                                                                <i class="bi bi-pencil-square text-primary me-2"></i> Edit Data Web
+                                                                            </button>
+                                                                        </li>
+                                                                        <li>
+                                                                            <form action="{{ route('admin.mesin.karyawan.db.destroy', $isLocal->id) }}" method="POST" onsubmit="return confirm('Hapus karyawan ini DARI DATABASE WEB saja? (Tetap ada di mesin fisik)');">
+                                                                                @csrf @method('DELETE')
+                                                                                <button type="submit" class="dropdown-item">
+                                                                                    <i class="bi bi-trash text-warning me-2"></i> Hapus dari Web
+                                                                                </button>
+                                                                            </form>
+                                                                        </li>
+                                                                        <li><hr class="dropdown-divider"></li>
+                                                                    @endif
+                                                                    <li>
+                                                                        <form action="{{ route('admin.mesin.hapus', ['mesin' => 'hikvision', 'pin' => $u['pin']]) }}" method="POST" onsubmit="return confirm('Hapus permanen PIN {{ $u['pin'] }} DARI MESIN FISIK HIKVISION?');">
+                                                                            @csrf @method('DELETE')
+                                                                            <button type="submit" class="dropdown-item text-danger">
+                                                                                <i class="bi bi-trash-fill text-danger me-2"></i> Hapus dari Mesin
+                                                                            </button>
+                                                                        </form>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 @empty
@@ -357,10 +384,37 @@
                                                             @endif
                                                         </td>
                                                         <td class="text-center pe-4">
-                                                            <form action="{{ route('admin.mesin.hapus', ['mesin' => 'solution', 'pin' => $u['pin']]) }}" method="POST" onsubmit="return confirm('Hapus permanen PIN {{ $u['pin'] }} dari Solution?');">
-                                                                @csrf @method('DELETE')
-                                                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Hapus</button>
-                                                            </form>
+                                                            <div class="dropdown">
+                                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                                    Opsi
+                                                                </button>
+                                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                                                    @if($isLocal)
+                                                                        <li>
+                                                                            <button type="button" class="dropdown-item" onclick="editKaryawan({{ $isLocal->id }}, '{{ $isLocal->nama }}', '{{ $isLocal->departemen }}', '{{ $isLocal->jabatan }}')">
+                                                                                <i class="bi bi-pencil-square text-primary me-2"></i> Edit Data Web
+                                                                            </button>
+                                                                        </li>
+                                                                        <li>
+                                                                            <form action="{{ route('admin.mesin.karyawan.db.destroy', $isLocal->id) }}" method="POST" onsubmit="return confirm('Hapus karyawan ini DARI DATABASE WEB saja? (Tetap ada di mesin fisik)');">
+                                                                                @csrf @method('DELETE')
+                                                                                <button type="submit" class="dropdown-item">
+                                                                                    <i class="bi bi-trash text-warning me-2"></i> Hapus dari Web
+                                                                                </button>
+                                                                            </form>
+                                                                        </li>
+                                                                        <li><hr class="dropdown-divider"></li>
+                                                                    @endif
+                                                                    <li>
+                                                                        <form action="{{ route('admin.mesin.hapus', ['mesin' => 'solution', 'pin' => $u['pin']]) }}" method="POST" onsubmit="return confirm('Hapus permanen PIN {{ $u['pin'] }} DARI MESIN FISIK SOLUTION?');">
+                                                                            @csrf @method('DELETE')
+                                                                            <button type="submit" class="dropdown-item text-danger">
+                                                                                <i class="bi bi-trash-fill text-danger me-2"></i> Hapus dari Mesin
+                                                                            </button>
+                                                                        </form>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
                                                         </td>
                                                     </tr>
                                                 @empty
@@ -493,8 +547,55 @@
     </div>
 </div>
 
+<!-- Modal Edit Karyawan (Web DB) -->
+<div class="modal fade" id="editKaryawanModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-lines-fill me-2"></i>Edit Data Web Karyawan</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editKaryawanForm" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Nama Lengkap</label>
+                        <input type="text" name="nama" id="edit_karyawan_nama" class="form-control bg-light border-0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Departemen</label>
+                        <input type="text" name="departemen" id="edit_karyawan_departemen" class="form-control bg-light border-0">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Jabatan</label>
+                        <input type="text" name="jabatan" id="edit_karyawan_jabatan" class="form-control bg-light border-0">
+                    </div>
+                    <div class="alert alert-warning border-0 shadow-sm small py-2 mt-4 mb-0">
+                        <i class="bi bi-info-circle-fill me-1"></i> Perubahan nama di sini hanya mengubah data di <b>Database Web</b>. Gunakan tombol "Kirim Data" jika ingin memperbarui nama di layar mesin fisik.
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light px-4 rounded-3 fw-semibold" data-bs-dismiss="modal">Batal</button>
+                    <button type="submit" class="btn btn-primary px-4 rounded-3 fw-bold">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    function editKaryawan(id, nama, dept, jab) {
+        document.getElementById('editKaryawanForm').action = "{{ url('admin/mesin-absensi/karyawan') }}/" + id;
+        document.getElementById('edit_karyawan_nama').value = nama;
+        document.getElementById('edit_karyawan_departemen').value = (dept === '-' || dept === 'null' || !dept) ? '' : dept;
+        document.getElementById('edit_karyawan_jabatan').value = (jab === '-' || jab === 'null' || !jab) ? '' : jab;
+        
+        var modal = new bootstrap.Modal(document.getElementById('editKaryawanModal'));
+        modal.show();
+    }
+
     function updateDefaultPort(val) {
         if(val === 'hikvision') {
             document.getElementById('inputPort').value = '80';

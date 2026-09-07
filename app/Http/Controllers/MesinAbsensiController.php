@@ -139,6 +139,33 @@ class MesinAbsensiController extends Controller
         return back()->with('status', "Berhasil menghapus PIN $pin dari $mesin. Detail: " . implode(" | ", $msg));
     }
 
+    public function updateKaryawan(Request $request, $id)
+    {
+        $karyawan = Karyawan::findOrFail($id);
+        
+        $request->validate([
+            'nama' => 'required|string|max:255',
+            'departemen' => 'nullable|string|max:255',
+            'jabatan' => 'nullable|string|max:255',
+        ]);
+
+        $karyawan->update([
+            'nama' => $request->nama,
+            'departemen' => $request->departemen,
+            'jabatan' => $request->jabatan,
+        ]);
+
+        return back()->with('status', "Data karyawan {$karyawan->nama} berhasil diubah di database lokal.");
+    }
+
+    public function hapusKaryawanDB($id)
+    {
+        $karyawan = Karyawan::findOrFail($id);
+        $nama = $karyawan->nama;
+        $karyawan->delete();
+        return back()->with('status', "Data karyawan {$nama} berhasil dihapus DARI DATABASE LOKAL SAJA (Tetap ada di memori mesin).");
+    }
+
     public function storeDevice(Request $request)
     {
         $request->validate([
