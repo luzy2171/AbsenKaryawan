@@ -44,6 +44,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/absensi', [AbsensiController::class, 'index'])->name('absensi.index');
         Route::get('/karyawan', [KaryawanController::class, 'index'])->name('karyawan.index');
         Route::get('admin/leaves', [LeaveController::class, 'index'])->name('admin.leaves.index');
+        Route::delete('admin/leaves/{id}', [LeaveController::class, 'destroy'])->name('admin.leaves.destroy');
     });
 
     // 3. Rute Khusus Approver Murni & Superadmin
@@ -51,7 +52,7 @@ Route::middleware('auth')->group(function () {
         Route::get('admin/cuti-control', [CutiControlController::class, 'index'])->name('admin.cuti.control');
         Route::put('admin/cuti-control/{id}', [CutiControlController::class, 'update'])->name('admin.cuti.control.update');
         Route::put('admin/leaves/{id}/approve', [LeaveController::class, 'approve'])->name('admin.leaves.approve');
-        Route::delete('admin/leaves/{id}', [LeaveController::class, 'destroy'])->name('admin.leaves.destroy');
+        
         Route::delete('/karyawan/{id}', [KaryawanController::class, 'destroy'])->name('karyawan.destroy');
         Route::get('admin/audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
         Route::get('admin/audit-logs/export', [AuditLogController::class, 'export'])->name('admin.audit-logs.export');
