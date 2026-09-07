@@ -240,3 +240,4 @@ class LeaveController extends Controller
             }
         }
     }
+}
