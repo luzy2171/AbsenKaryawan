@@ -162,9 +162,13 @@
                     </div>
 
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalSyncMesin">
-                            <i class="bi bi-arrow-clockwise me-1"></i> Sync dari Mesin
-                        </button>
+                        <form action="{{ route('karyawan.sync-mesin') }}" method="POST" onsubmit="return confirm('Tarik data pendaftaran khusus dari mesin Solution X100C ke database?');">
+                            @csrf
+                            <input type="hidden" name="mesin_tujuan" value="solution">
+                            <button type="submit" class="btn btn-outline-success">
+                                <i class="bi bi-arrow-clockwise me-1"></i> Sync dari Mesin (Solution)
+                            </button>
+                        </form>
 
                         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalTambahKaryawan">
                             <i class="bi bi-plus-lg me-1"></i> Tambah Karyawan
