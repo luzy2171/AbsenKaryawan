@@ -54,10 +54,7 @@ class PengaturanController extends Controller
         // Fitur 3: Aksi download Template Sidik Jari
         if ($request->has('download_fp')) {
             $startTime = microtime(true);
-            $templates = [] /* not supported by zkteco */; //
-                $request->input('user_id', '1'),
-                $request->input('finger_id', '0')
-            );
+            $templates = []; // Not supported by zkteco
             
             // Update status mesin
             if ($primaryMachine) {
