@@ -61,6 +61,11 @@ Route::middleware('auth')->group(function () {
     // 4. Aksi Operasional (Admin ke atas)
     Route::middleware('admin')->group(function () {
         Route::get('admin/mesin-absensi', [MesinAbsensiController::class, 'index'])->name('admin.mesin.index');
+        Route::get('admin/mesin-absensi/hikvision', [MesinAbsensiController::class, 'hikvision'])->name('admin.mesin.hikvision');
+        Route::get('admin/mesin-absensi/solution', [MesinAbsensiController::class, 'solution'])->name('admin.mesin.solution');
+        Route::post('admin/mesin-absensi/tarik/{mesin}', [MesinAbsensiController::class, 'tarikData'])->name('admin.mesin.tarik');
+        Route::post('admin/mesin-absensi/kirim/{mesin}', [MesinAbsensiController::class, 'kirimData'])->name('admin.mesin.kirim');
+        Route::delete('admin/mesin-absensi/hapus/{mesin}/{pin}', [MesinAbsensiController::class, 'hapusData'])->name('admin.mesin.hapus');
         Route::post('/absensi/tarik', [AbsensiController::class, 'tarikDataDariMesin'])->name('absensi.tarik');
         Route::post('/absensi/toggle-auto-pull', [AbsensiController::class, 'toggleAutoPull'])->name('absensi.toggle-auto');
         Route::get('/absensi/cetak', [AbsensiController::class, 'cetakLaporan'])->name('absensi.cetak');
