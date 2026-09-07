@@ -110,11 +110,16 @@ class LeaveController extends Controller
     public function destroy($id)
     {
         $leave = Leave::findOrFail($id);
+
+        if ($leave->status === 'Disetujui' && !auth()->user()->isTrueApprover()) {
+            return back()->with('error', 'Gagal menghapus! Pengajuan Cuti/Izin/Sakit yang sudah disetujui hanya dapat dihapus oleh Approver/Superadmin.');
+        }
+
         $jenis = $leave->jenis;
         $karyawan_id = $leave->karyawan_id;
 
-        if (!auth()->user()->isTrueApprover()) {
-            abort(403, 'Akses ditolak. Hanya Approver dan Superadmin yang dapat menghapus pengajuan ini.');
+        if (!auth()->user()->isApprover()) {
+            abort(403, 'Akses ditolak. Anda tidak memiliki izin untuk menghapus pengajuan ini.');
         }
 
         Attendance::where('karyawan_id', $leave->karyawan_id)

@@ -54,6 +54,13 @@
                         <i class="bi bi-envelope-paper me-2"></i> Izin & Cuti
                     </a>
                 </li>
+                @if(auth()->user()->isTrueApprover())
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('admin/cuti-control*') ? 'active' : '' }}" href="{{ route('admin.cuti.control') }}">
+                        <i class="bi bi-sliders me-2"></i> Kontrol Cuti
+                    </a>
+                </li>
+                @endif
                 @if(auth()->user()->isSuperadmin())
                 <li class="nav-item">
                     <a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}" href="{{ url('/admin/settings') }}">
@@ -271,14 +278,20 @@
                                         </span>
                                         @endif
                                     @endif
-                                    @if(auth()->user()->isTrueApprover())
-                                    <form action="{{ route('admin.leaves.destroy', $leave->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus data pengajuan ini? Ini juga akan menghapus cap absensi Izin/Cuti/Sakit untuk tanggal tersebut di Laporan Absensi.');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    @if(auth()->user()->isApprover())
+                                        @if($leave->status !== 'Disetujui' || auth()->user()->isTrueApprover())
+                                        <form action="{{ route('admin.leaves.destroy', $leave->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Hapus data pengajuan ini? Ini juga akan menghapus cap absensi Izin/Cuti/Sakit untuk tanggal tersebut di Laporan Absensi.');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                <i class="bi bi-trash"></i> Hapus
+                                            </button>
+                                        </form>
+                                        @else
+                                        <button class="btn btn-sm btn-outline-secondary disabled" title="Admin tidak dapat menghapus data yang sudah disetujui">
                                             <i class="bi bi-trash"></i> Hapus
                                         </button>
-                                    </form>
+                                        @endif
                                     @endif
                                 </td>
                             </tr>

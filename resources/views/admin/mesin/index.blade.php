@@ -117,193 +117,134 @@
                 </ul>
             </div>
 
-            <div class="col-md-10 p-4">
-                <div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+                    <div class="col-md-10 p-4">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4 fade-in">
+                <div class="d-flex align-items-center">
+                    <div class="bg-primary bg-opacity-10 text-primary p-3 rounded-4 me-3">
+                        <i class="bi bi-hdd-network fs-3"></i>
+                    </div>
                     <div>
-                        <h4 class="fw-bold m-0 mb-1">Dashboard Ringkasan</h4>
-                        <div class="d-flex align-items-center">
-                            <i class="bi bi-calendar3 text-muted me-2"></i>
-                            <small class="text-muted">{{ \Carbon\Carbon::now()->translatedFormat('l, d F Y') }}</small>
-                        </div>
-                    </div>
-                                        <div class="dropdown">
-                        <a href="#" class="d-flex align-items-center text-decoration-none dropdown-toggle" id="dropdownUser" data-bs-toggle="dropdown" aria-expanded="false" style="color: inherit;">
-                            <div class="text-end me-3">
-                                <p class="mb-0 fw-semibold small">{{ auth()->user()->name }}</p>
-                                <small
-                                    class="text-muted">{{ match(auth()->user()->role) { 'superadmin' => 'Superadmin', 'approval' => 'Approval', default => 'Admin' } }}</small>
-                            </div>
-                            <div class="avatar-circle bg-success text-white"
-                                style="width: 45px; height: 45px; font-size: 18px;">
-                                {{ strtoupper(substr(auth()->user()->name, 0, 1)) }}
-                            </div>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" aria-labelledby="dropdownUser">
-                            <li>
-                                <a class="dropdown-item d-flex align-items-center py-2" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">
-                                    <i class="bi bi-person-circle me-2 text-primary"></i> Edit Profil & Password
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li>
-                                <form action="{{ route('logout') }}" method="POST" class="m-0">
-                                    @csrf
-                                    <button type="submit" class="dropdown-item d-flex align-items-center py-2 text-danger">
-                                        <i class="bi bi-box-arrow-right me-2"></i> Keluar
-                                    </button>
-                                </form>
-                            </li>
-                        </ul>
+                        <h4 class="fw-bold m-0 mb-1">Mesin Absensi</h4>
+                        <small class="text-muted">Kelola & sinkronisasi data karyawan ke mesin Solution & HIK</small>
                     </div>
                 </div>
+                <div>
+                    <button class="btn btn-outline-primary fw-semibold rounded-3 px-4">
+                        <i class="bi bi-arrow-left-right me-2"></i>Sinkron Dua Arah
+                    </button>
+                </div>
+            </div>
 
-                <div class="row g-3 mb-4 fade-in">
-                    <div class="col-md-3">
-                        <div class="card card-custom stat-card p-3 bg-white">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <p class="text-muted small mb-1 fw-semibold">Total Karyawan</p>
-                                    <h3 class="fw-bold mb-0">{{ $totalKaryawan }}</h3>
+            <div class="row g-4 mb-4 fade-in">
+                <!-- Form Tambah Karyawan ke Mesin -->
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body p-4">
+                            <h6 class="fw-bold mb-4">Daftarkan Karyawan ke Mesin</h6>
+                            <form>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-semibold">Mesin Tujuan</label>
+                                    <select class="form-select bg-light border-0">
+                                        <option value="solution">Solution</option>
+                                        <option value="hik">HIK</option>
+                                    </select>
                                 </div>
-                                <div class="stat-icon bg-primary-subtle text-primary"><i class="bi bi-people"></i></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card card-custom stat-card p-3 bg-white">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <p class="text-muted small mb-1 fw-semibold">Hadir Hari Ini</p>
-                                    <h3 class="fw-bold mb-0 text-success hadir-counter">{{ $hadirHariIni }}</h3>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-semibold">Karyawan</label>
+                                    <select class="form-select bg-light border-0">
+                                        <option value="">Pilih karyawan</option>
+                                    </select>
                                 </div>
-                                <div class="stat-icon bg-success-subtle text-success"><i class="bi bi-check-circle"></i>
+                                <div class="mb-4">
+                                    <label class="form-label text-muted small fw-semibold">Finger ID</label>
+                                    <input type="number" class="form-control bg-light border-0" value="0">
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card card-custom stat-card p-3 bg-white">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <p class="text-muted small mb-1 fw-semibold">Terlambat</p>
-                                    <h3 class="fw-bold mb-0 text-warning terlambat-counter">{{ $terlambat }}</h3>
-                                </div>
-                                <div class="stat-icon bg-warning-subtle text-warning"><i
-                                        class="bi bi-exclamation-circle"></i></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card card-custom stat-card p-3 bg-white">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <p class="text-muted small mb-1 fw-semibold">Tidak Hadir (Alpha)</p>
-                                    <h3 class="fw-bold mb-0 text-danger alpha-counter">{{ $tidakHadir }}</h3>
-                                </div>
-                                <div class="stat-icon bg-danger-subtle text-danger"><i class="bi bi-x-circle"></i></div>
-                            </div>
+                                <button type="button" class="btn btn-primary w-100 fw-bold rounded-3">
+                                    <i class="bi bi-plus-lg me-2"></i> Tambah
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
 
-                @if($machineStatus)
-                    <div class="row mb-4 fade-in">
-                        <div class="col-md-12">
-                            <div class="card card-custom p-3 bg-white">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div class="d-flex align-items-center">
-                                        <div id="machine-status-indicator" class="me-3">
-                                            <span
-                                                class="badge badge-status {{ $machineStatus->isOnline() ? 'bg-success' : 'bg-danger' }}">
-                                                <i class="bi bi-circle-fill me-2 {{ $machineStatus->isOnline() ? 'pulse-animation' : '' }}"
-                                                    style="font-size: 8px;"></i>
-                                                <span
-                                                    id="machine-status-text">{{ $machineStatus->isOnline() ? 'Online' : 'Offline' }}</span>
-                                            </span>
-                                        </div>
+                <!-- Statistik -->
+                <div class="col-md-8">
+                    <div class="row g-3 h-100">
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm rounded-4 bg-primary text-white h-100">
+                                <div class="card-body p-4 d-flex flex-column justify-content-center">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
                                         <div>
-                                            <p class="mb-0 fw-bold">Status Mesin Absensi</p>
-                                            <small class="text-muted" id="machine-last-ping">
-                                                Terakhir ping:
-                                                {{ $machineStatus->last_ping ? $machineStatus->last_ping->diffForHumans() : 'Belum pernah' }}
-                                            </small>
+                                            <h6 class="text-white-50 mb-1">Mesin Solution</h6>
+                                            <h3 class="fw-bold mb-0">1</h3>
+                                        </div>
+                                        <div class="bg-white bg-opacity-25 p-3 rounded-4">
+                                            <i class="bi bi-fingerprint fs-3"></i>
                                         </div>
                                     </div>
-                                    <div class="text-end">
-                                        <small class="text-muted d-block"><i class="bi bi-hdd-network me-1"></i>IP:
-                                            {{ $machineStatus->machine_ip ?? '-' }}</small>
-                                        <small class="text-muted"><i class="bi bi-speedometer2 me-1"></i>Response: <span
-                                                id="machine-response-time">{{ $machineStatus->response_time ?? 0 }}</span>ms</small>
+                                    <span class="small text-white-50">karyawan terdaftar</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card border-0 shadow-sm rounded-4 bg-dark text-white h-100">
+                                <div class="card-body p-4 d-flex flex-column justify-content-center">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h6 class="text-white-50 mb-1">Mesin HIK</h6>
+                                            <h3 class="fw-bold mb-0">2</h3>
+                                        </div>
+                                        <div class="bg-white bg-opacity-25 p-3 rounded-4">
+                                            <i class="bi bi-person-bounding-box fs-3"></i>
+                                        </div>
                                     </div>
+                                    <span class="small text-white-50">karyawan terdaftar</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                @endif
+                </div>
+            </div>
 
-                <div class="row g-4 fade-in">
-                    <div class="col-md-4">
-                        <div class="card card-custom p-4 bg-white h-100">
-                            <h5 class="fw-bold mb-3"><i class="bi bi-pie-chart me-2 text-success"></i>Grafik Kehadiran
-                                Hari Ini</h5>
-                            <div class="chart-container d-flex justify-content-center align-items-center"
-                                style="min-height: 200px;">
-                                <canvas id="donutChart" width="200" height="200"></canvas>
+            <!-- Tabel Data Mesin -->
+            <div class="row g-4 fade-in">
+                <!-- Tabel Solution -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <h6 class="fw-bold m-0 me-2">Solution</h6>
+                                <span class="badge bg-primary-subtle text-primary rounded-pill">1 karyawan</span>
                             </div>
+                            <button class="btn btn-sm btn-outline-success fw-semibold rounded-3 px-3">
+                                <i class="bi bi-send me-1"></i> Kirim ke HIK
+                            </button>
                         </div>
-                    </div>
-
-                    <div class="col-md-8">
-                        <div class="card card-custom p-4 bg-white h-100">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="fw-bold m-0"><i class="bi bi-clock-history me-2 text-success"></i>Absensi
-                                    Terbaru</h5>
-                                <a href="{{ url('/absensi') }}" class="btn btn-sm btn-outline-success">
-                                    <i class="bi bi-arrow-right-circle me-1"></i>Lihat Semua
-                                </a>
-                            </div>
+                        <div class="card-body p-0 mt-3">
                             <div class="table-responsive">
-                                <table class="table table-hover table-borderless align-middle">
-                                    <thead>
-                                        <tr class="text-muted small border-bottom">
-                                            <th class="fw-bold">NAMA</th>
-                                            <th class="fw-bold">JAM MASUK</th>
-                                            <th class="fw-bold">STATUS</th>
+                                <table class="table table-hover align-middle mb-0" style="min-width: 500px;">
+                                    <thead class="table-light text-secondary">
+                                        <tr>
+                                            <th class="ps-4 fw-semibold small">ID</th>
+                                            <th class="fw-semibold small">Nama</th>
+                                            <th class="fw-semibold small">Dept</th>
+                                            <th class="fw-semibold small">Jabatan</th>
+                                            <th class="fw-semibold small text-center">Finger</th>
+                                            <th class="fw-semibold small text-center pe-4">Sync</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse($absensiTerbaru as $absen)
-                                            <tr class="border-bottom">
-                                                <td>
-                                                    <div class="d-flex align-items-center py-1">
-                                                        <div class="avatar-circle text-success fw-bold me-2 small">
-                                                            {{ strtoupper(substr($absen->karyawan->nama, 0, 1)) }}
-                                                        </div>
-                                                        <div>
-                                                            <div class="fw-bold small">{{ $absen->karyawan->nama }}</div>
-                                                            <small
-                                                                class="text-muted extra-small">{{ $absen->karyawan->jabatan ?? 'Staf' }}</small>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td class="small fw-semibold">
-                                                    {{ \Carbon\Carbon::parse($absen->jam_masuk)->format('H:i') }} WIB
-                                                </td>
-                                                <td>
-                                                    <span
-                                                        class="badge {{ $absen->status == 'Hadir' ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning' }} px-3 py-2 small fw-semibold">
-                                                        {{ $absen->status }}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="3" class="text-center text-muted py-5">
-                                                    <i class="bi bi-inbox fs-1 d-block mb-3 text-secondary opacity-50"></i>
-                                                    <p class="mb-0 fw-semibold">Belum ada absensi hari ini</p>
-                                                </td>
-                                            </tr>
-                                        @endforelse
+                                        <tr>
+                                            <td class="ps-4 text-muted small">004</td>
+                                            <td class="fw-semibold small">Dewi Lestari</td>
+                                            <td class="small"><span class="badge bg-light text-dark border">Marketing</span></td>
+                                            <td class="small text-muted">Marketing Staff</td>
+                                            <td class="text-center small">0</td>
+                                            <td class="text-center pe-4">
+                                                <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                            </td>
+                                        </tr>
                                     </tbody>
                                 </table>
                             </div>
@@ -311,39 +252,65 @@
                     </div>
                 </div>
 
-                <div class="row g-4 mt-1 fade-in">
-                    <div class="col-md-6">
-                        <div class="card card-custom p-4 bg-white">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="fw-bold m-0"><i class="bi bi-graph-up me-2 text-primary"></i>Tren Kehadiran
-                                    Mingguan</h5>
-                                <span class="badge bg-light text-dark fw-semibold">7 Hari Terakhir</span>
+                <!-- Tabel HIK -->
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <h6 class="fw-bold m-0 me-2">HIK</h6>
+                                <span class="badge bg-dark-subtle text-dark rounded-pill">2 karyawan</span>
                             </div>
-                            <div class="chart-container" style="height: 300px;">
-                                <canvas id="weeklyTrendChart"></canvas>
-                            </div>
+                            <button class="btn btn-sm btn-outline-primary fw-semibold rounded-3 px-3">
+                                <i class="bi bi-send me-1"></i> Kirim ke Solution
+                            </button>
                         </div>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="card card-custom p-4 bg-white">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h5 class="fw-bold m-0"><i class="bi bi-calendar3 me-2 text-primary"></i>Tren Kehadiran
-                                    Bulanan</h5>
-                                <span class="badge bg-light text-dark fw-semibold">30 Hari Terakhir</span>
-                            </div>
-                            <div class="chart-container" style="height: 300px;">
-                                <canvas id="monthlyTrendChart"></canvas>
+                        <div class="card-body p-0 mt-3">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0" style="min-width: 500px;">
+                                    <thead class="table-light text-secondary">
+                                        <tr>
+                                            <th class="ps-4 fw-semibold small">ID</th>
+                                            <th class="fw-semibold small">Nama</th>
+                                            <th class="fw-semibold small">Dept</th>
+                                            <th class="fw-semibold small">Jabatan</th>
+                                            <th class="fw-semibold small text-center">Finger</th>
+                                            <th class="fw-semibold small text-center pe-4">Sync</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td class="ps-4 text-muted small">004</td>
+                                            <td class="fw-semibold small">Dewi Lestari</td>
+                                            <td class="small"><span class="badge bg-light text-dark border">Marketing</span></td>
+                                            <td class="small text-muted">Marketing Staff</td>
+                                            <td class="text-center small">0</td>
+                                            <td class="text-center pe-4">
+                                                <i class="bi bi-check-circle-fill text-success fs-5"></i>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="ps-4 text-muted small">001</td>
+                                            <td class="fw-semibold small">Budi</td>
+                                            <td class="small"><span class="badge bg-light text-dark border">IT</span></td>
+                                            <td class="small text-muted">Programmer</td>
+                                            <td class="text-center small">0</td>
+                                            <td class="text-center pe-4">
+                                                <i class="bi bi-exclamation-circle-fill text-warning fs-5" title="Belum tersinkronisasi"></i>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
                 </div>
-
             </div>
         </div>
+        
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     @if(env('BROADCAST_DRIVER') === 'reverb' || env('BROADCAST_DRIVER') === 'pusher')
     <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
     <script>

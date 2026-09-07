@@ -11,6 +11,8 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\Admin\DatabaseMaintenanceController;
 use App\Http\Controllers\LeaveController;
+use App\Http\Controllers\CutiControlController;
+use App\Http\Controllers\MesinAbsensiController;
 
 
 /*
@@ -46,6 +48,8 @@ Route::middleware('auth')->group(function () {
 
     // 3. Rute Khusus Approver Murni & Superadmin
     Route::middleware('true_approver')->group(function () {
+        Route::get('admin/cuti-control', [CutiControlController::class, 'index'])->name('admin.cuti.control');
+        Route::put('admin/cuti-control/{id}', [CutiControlController::class, 'update'])->name('admin.cuti.control.update');
         Route::put('admin/leaves/{id}/approve', [LeaveController::class, 'approve'])->name('admin.leaves.approve');
         Route::delete('admin/leaves/{id}', [LeaveController::class, 'destroy'])->name('admin.leaves.destroy');
         Route::delete('/karyawan/{id}', [KaryawanController::class, 'destroy'])->name('karyawan.destroy');
@@ -56,6 +60,7 @@ Route::middleware('auth')->group(function () {
 
     // 4. Aksi Operasional (Admin ke atas)
     Route::middleware('admin')->group(function () {
+        Route::get('admin/mesin-absensi', [MesinAbsensiController::class, 'index'])->name('admin.mesin.index');
         Route::post('/absensi/tarik', [AbsensiController::class, 'tarikDataDariMesin'])->name('absensi.tarik');
         Route::post('/absensi/toggle-auto-pull', [AbsensiController::class, 'toggleAutoPull'])->name('absensi.toggle-auto');
         Route::get('/absensi/cetak', [AbsensiController::class, 'cetakLaporan'])->name('absensi.cetak');

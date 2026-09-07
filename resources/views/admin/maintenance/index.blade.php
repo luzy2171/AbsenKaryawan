@@ -59,6 +59,13 @@
                         <i class="bi bi-envelope-paper me-2"></i> Izin & Cuti
                     </a>
                 </li>
+                @if(auth()->user()->isTrueApprover())
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('admin/cuti-control*') ? 'active' : '' }}" href="{{ route('admin.cuti.control') }}">
+                        <i class="bi bi-sliders me-2"></i> Kontrol Cuti
+                    </a>
+                </li>
+                @endif
                 @if(auth()->user()->isSuperadmin())
                         <li class="nav-item">
                             <a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}"
@@ -70,6 +77,12 @@
                             <a class="nav-link {{ request()->is('pengaturan*') ? 'active' : '' }}"
                                 href="{{ url('/pengaturan') }}">
                                 <i class="bi bi-gear me-2"></i> Kontrol Mesin
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ request()->is('admin/mesin-absensi*') ? 'active' : '' }}"
+                                href="{{ route('admin.mesin.index') }}">
+                                <i class="bi bi-hdd-network me-2"></i> Mesin Absensi
                             </a>
                         </li>
                 <li class="nav-item">

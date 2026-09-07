@@ -52,6 +52,13 @@
                         <i class="bi bi-envelope-paper me-2"></i> Izin & Cuti
                     </a>
                 </li>
+                @if(auth()->user()->isTrueApprover())
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('admin/cuti-control*') ? 'active' : '' }}" href="{{ route('admin.cuti.control') }}">
+                        <i class="bi bi-sliders me-2"></i> Kontrol Cuti
+                    </a>
+                </li>
+                @endif
                 @if(auth()->user()->isSuperadmin())
 <li class="nav-item">
                     <a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}" href="{{ url('/admin/settings') }}">
