@@ -166,6 +166,40 @@ class MesinAbsensiController extends Controller
         return back()->with('status', "Data karyawan {$nama} berhasil dihapus DARI DATABASE LOKAL SAJA (Tetap ada di memori mesin).");
     }
 
+    public function cleanUnsynced($mesin, HikvisionService $hikService, ZktecoService $zkService)
+    {
+        $machines = \App\Models\MachineStatus::where('machine_type', $mesin)->get();
+        $localKaryawans = Karyawan::pluck('id_karyawan')->toArray();
+        $deletedCount = 0;
+        $failedCount = 0;
+
+        foreach ($machines as $m) {
+            if ($mesin == 'hikvision') {
+                $hikService->setConnection($m->machine_ip, $m->username, $m->password, $m->port);
+                $users = $hikService->getAllUsers();
+                foreach ($users as $u) {
+                    if (!in_array((string)$u['pin'], $localKaryawans)) {
+                        $res = $hikService->hapusUser($u['pin']);
+                        if ($res == "Sukses") $deletedCount++;
+                        else $failedCount++;
+                    }
+                }
+            } else {
+                $zkService->setConnection($m->machine_ip, $m->port);
+                $users = $zkService->getAllUsers();
+                foreach ($users as $u) {
+                    if (!in_array((string)$u['pin'], $localKaryawans)) {
+                        $res = $zkService->hapusUser($u['pin']);
+                        if ($res == "Sukses") $deletedCount++;
+                        else $failedCount++;
+                    }
+                }
+            }
+        }
+
+        return back()->with('status', "Pembersihan selesai! $deletedCount data asing berhasil dihapus dari memori mesin $mesin." . ($failedCount > 0 ? " ($failedCount gagal)" : ""));
+    }
+
     public function storeDevice(Request $request)
     {
         $request->validate([

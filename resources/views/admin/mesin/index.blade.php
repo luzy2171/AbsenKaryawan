@@ -290,6 +290,14 @@
                             <div class="tab-content" id="mesinTabContent">
                                 <!-- Tab Hikvision -->
                                 <div class="tab-pane fade show active" id="hik" role="tabpanel">
+                                    <div class="d-flex justify-content-end p-3 bg-light border-bottom">
+                                        <form action="{{ route('admin.mesin.clean', 'hikvision') }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus SEMUA user di mesin Hikvision yang tidak terdaftar di database Web? (Visitor, data lama, dll)');">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-danger fw-semibold shadow-sm">
+                                                <i class="bi bi-stars me-1"></i> Bersihkan Data Asing (Auto-Hapus)
+                                            </button>
+                                        </form>
+                                    </div>
                                     <div class="table-responsive">
                                         <table class="table table-hover align-middle mb-0">
                                             <thead class="table-light text-secondary">
@@ -357,6 +365,14 @@
                                 
                                 <!-- Tab Solution -->
                                 <div class="tab-pane fade" id="sol" role="tabpanel">
+                                    <div class="d-flex justify-content-end p-3 bg-light border-bottom">
+                                        <form action="{{ route('admin.mesin.clean', 'solution') }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus SEMUA user di mesin Solution yang tidak terdaftar di database Web?');">
+                                            @csrf
+                                            <button type="submit" class="btn btn-sm btn-danger fw-semibold shadow-sm">
+                                                <i class="bi bi-stars me-1"></i> Bersihkan Data Asing (Auto-Hapus)
+                                            </button>
+                                        </form>
+                                    </div>
                                     <div class="table-responsive">
                                         <table class="table table-hover align-middle mb-0">
                                             <thead class="table-light text-secondary">

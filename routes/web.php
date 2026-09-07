@@ -70,6 +70,7 @@ Route::middleware('auth')->group(function () {
         Route::post('admin/mesin-absensi/tarik', [MesinAbsensiController::class, 'tarikDataAll'])->name('admin.mesin.tarik');
         Route::post('admin/mesin-absensi/kirim', [MesinAbsensiController::class, 'kirimData'])->name('admin.mesin.kirim');
         Route::delete('admin/mesin-absensi/hapus/{mesin}/{pin}', [MesinAbsensiController::class, 'hapusData'])->name('admin.mesin.hapus');
+        Route::post('admin/mesin-absensi/clean/{mesin}', [MesinAbsensiController::class, 'cleanUnsynced'])->name('admin.mesin.clean');
         Route::put('admin/mesin-absensi/karyawan/{id}', [MesinAbsensiController::class, 'updateKaryawan'])->name('admin.mesin.karyawan.update');
         Route::delete('admin/mesin-absensi/karyawan/{id}/db', [MesinAbsensiController::class, 'hapusKaryawanDB'])->name('admin.mesin.karyawan.db.destroy');
         Route::post('/absensi/tarik', [AbsensiController::class, 'tarikDataDariMesin'])->name('absensi.tarik');
