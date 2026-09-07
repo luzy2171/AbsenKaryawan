@@ -151,43 +151,46 @@
                     </div>
                 </div>
             </div>
-
             <div class="row g-4 mb-4 fade-in">
-                <!-- Aksi Global / Central Control -->
-                <div class="col-md-4">
+                <!-- Action Panels -->
+                <div class="col-md-6">
                     <div class="card border-0 shadow-sm rounded-4 h-100">
                         <div class="card-body p-4">
-                            <!-- Kirim Data -->
                             <h6 class="fw-bold mb-3"><i class="bi bi-upload text-primary me-2"></i>Kirim Data ke Mesin</h6>
-                            <p class="text-muted small">Kirim akun karyawan lokal ke mesin absensi fisik.</p>
+                            <p class="text-muted small">Kirim akun karyawan lokal ke mesin absensi fisik (Sinkronisasi Web ke Mesin).</p>
                             <form action="{{ route('admin.mesin.kirim') }}" method="POST">
                                 @csrf
-                                <div class="mb-2">
-                                    <select class="form-select bg-light border-0" name="karyawan_id" required>
-                                        <option value="">-- Pilih Karyawan --</option>
-                                        @foreach($karyawans as $k)
-                                            <option value="{{ $k->id }}">{{ $k->id_karyawan }} - {{ $k->nama }}</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <select class="form-select bg-light border-0" name="mesin_tujuan" required>
-                                        <option value="">-- Mesin Tujuan --</option>
-                                        <option value="all">Semua Mesin (HIK & Solution)</option>
-                                        <option value="hikvision">Hanya Hikvision</option>
-                                        <option value="solution">Hanya Solution</option>
-                                    </select>
+                                <div class="row g-2 mb-3">
+                                    <div class="col-md-6">
+                                        <select class="form-select bg-light border-0" name="karyawan_id" required>
+                                            <option value="">-- Pilih Karyawan --</option>
+                                            @foreach($karyawans as $k)
+                                                <option value="{{ $k->id }}">{{ $k->id_karyawan }} - {{ $k->nama }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <select class="form-select bg-light border-0" name="mesin_tujuan" required>
+                                            <option value="">-- Mesin Tujuan --</option>
+                                            <option value="all">Semua Mesin (HIK & Solution)</option>
+                                            <option value="hikvision">Hanya Hikvision</option>
+                                            <option value="solution">Hanya Solution</option>
+                                        </select>
+                                    </div>
                                 </div>
                                 <button type="submit" class="btn btn-primary w-100 fw-bold rounded-3">
-                                    Kirim
+                                    <i class="bi bi-send me-1"></i> Kirim
                                 </button>
                             </form>
-                            
-                            <hr class="my-4">
-                            
-                            <!-- Tarik Data -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body p-4">
                             <h6 class="fw-bold mb-3"><i class="bi bi-download text-success me-2"></i>Tarik Data dari Mesin</h6>
-                            <p class="text-muted small">Tarik data pendaftaran dari mesin untuk didaftarkan otomatis ke database lokal (sinkronisasi).</p>
+                            <p class="text-muted small">Tarik data pendaftaran dari mesin untuk didaftarkan otomatis ke database lokal (Sinkronisasi Mesin ke Web).</p>
                             <form action="{{ route('admin.mesin.tarik') }}" method="POST" onsubmit="return confirm('Mulai tarik data dan daftarkan ke database lokal?')">
                                 @csrf
                                 <div class="mb-3">
@@ -199,14 +202,18 @@
                                     </select>
                                 </div>
                                 <button type="submit" class="btn btn-outline-success w-100 fw-bold rounded-3">
-                                    Tarik Data
+                                    <i class="bi bi-cloud-download me-1"></i> Tarik Data
                                 </button>
                             </form>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <!-- Real-Time Event & Controlled -->
-                    <div class="card border-0 shadow-sm rounded-4 mt-4 h-auto fade-in">
+            <!-- Real-Time Event & Controlled -->
+            <div class="row g-4 mb-4 fade-in">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4 h-auto">
                         <div class="card-header bg-dark text-white border-bottom-0 pt-3 pb-2 px-4 rounded-top-4 d-flex justify-content-between align-items-center">
                             <h6 class="fw-bold m-0"><i class="bi bi-shield-lock me-2"></i>Real-Time Event & Controlled</h6>
                             <span class="badge bg-secondary rounded-pill" style="font-size: 10px;">Hikvision Only</span>
@@ -215,7 +222,7 @@
                             <p class="text-muted small mb-3">Kontrol akses pintu dari jarak jauh dan pantau log aktivitas pintu secara real-time.</p>
                             
                             <div class="row g-3 mb-4">
-                                <div class="col-md-8">
+                                <div class="col-md-9">
                                     <select class="form-select bg-light border-0" id="live_machine_id">
                                         <option value="">-- Pilih Pintu Hikvision untuk Dipantau --</option>
                                         @foreach($machines->where('machine_type', 'hikvision') as $m)
@@ -223,7 +230,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <form action="{{ route('admin.mesin.door.open') }}" method="POST" id="doorOpenForm" onsubmit="return submitDoorOpen(event);">
                                         @csrf
                                         <input type="hidden" name="machine_id" id="door_machine_id">
@@ -235,10 +242,10 @@
                             </div>
 
                             <div class="table-responsive bg-light rounded-3 p-1">
-                                <table class="table table-borderless table-hover align-middle mb-0" style="font-size: 12px;">
+                                <table class="table table-borderless table-hover align-middle mb-0" style="font-size: 13px;">
                                     <thead class="text-muted" style="border-bottom: 2px solid #e9ecef;">
                                         <tr>
-                                            <th class="fw-semibold pb-2">TIME</th>
+                                            <th class="fw-semibold pb-2 ps-3">TIME</th>
                                             <th class="fw-semibold pb-2">EVENT TYPES</th>
                                             <th class="fw-semibold pb-2">NAME</th>
                                             <th class="fw-semibold pb-2">EMP. ID</th>
@@ -249,7 +256,7 @@
                                         <tr>
                                             <td colspan="5" class="text-center py-4 text-muted">
                                                 <i class="bi bi-activity fs-3 d-block mb-2 opacity-50"></i>
-                                                Pilih mesin di atas untuk mulai memantau *Real-Time Events*.
+                                                Pilih mesin di atas untuk mulai memantau <strong>Real-Time Events</strong>.
                                             </td>
                                         </tr>
                                     </tbody>
@@ -258,94 +265,106 @@
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Statistik Data Mesin Side by side -->
-                <div class="col-md-8">
-                    <div class="row g-4 h-100">
-                        <!-- Tabel HIK -->
-                        <div class="col-md-6">
-                            <div class="card border-0 shadow-sm rounded-4 h-100">
-                                <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-person-bounding-box text-dark fs-5 me-2"></i>
-                                        <h6 class="fw-bold m-0 me-2">Mesin Hikvision</h6>
-                                    </div>
-                                    <span class="badge bg-dark-subtle text-dark rounded-pill">{{ $totalHik }} user</span>
-                                </div>
-                                <div class="card-body p-0">
+            <!-- Data User di Mesin (Tab Layout) -->
+            <div class="row g-4 mb-4 fade-in">
+                <div class="col-12">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
+                            <h6 class="fw-bold m-0"><i class="bi bi-people text-primary me-2"></i>Data Karyawan di Mesin Fisik</h6>
+                        </div>
+                        <div class="card-body p-0">
+                            <!-- Nav tabs -->
+                            <ul class="nav nav-tabs px-4 border-bottom-0" id="mesinTab" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active fw-semibold text-dark pb-3 border-0 border-bottom border-3 border-primary" id="hik-tab" data-bs-toggle="tab" data-bs-target="#hik" type="button" role="tab">
+                                        <i class="bi bi-person-bounding-box me-1"></i> Hikvision <span class="badge bg-dark ms-1">{{ $totalHik }}</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link fw-semibold text-muted pb-3 border-0" id="sol-tab" data-bs-toggle="tab" data-bs-target="#sol" type="button" role="tab" onclick="this.classList.add('text-dark', 'border-bottom', 'border-3', 'border-primary'); this.classList.remove('text-muted'); document.getElementById('hik-tab').classList.remove('text-dark', 'border-bottom', 'border-3', 'border-primary'); document.getElementById('hik-tab').classList.add('text-muted');">
+                                        <i class="bi bi-fingerprint me-1"></i> Solution <span class="badge bg-primary ms-1">{{ $totalSol }}</span>
+                                    </button>
+                                </li>
+                            </ul>
+
+                            <!-- Tab panes -->
+                            <div class="tab-content" id="mesinTabContent">
+                                <!-- Tab Hikvision -->
+                                <div class="tab-pane fade show active" id="hik" role="tabpanel">
                                     <div class="table-responsive">
                                         <table class="table table-hover align-middle mb-0">
                                             <thead class="table-light text-secondary">
                                                 <tr>
-                                                    <th class="ps-4 fw-semibold small" style="width:25%">PIN</th>
-                                                    <th class="fw-semibold small" style="width:50%">Nama</th>
-                                                    <th class="fw-semibold small text-center pe-4" style="width:25%">Aksi</th>
+                                                    <th class="ps-4 fw-semibold small" style="width: 20%;">PIN / ID</th>
+                                                    <th class="fw-semibold small" style="width: 40%;">NAMA DI MESIN</th>
+                                                    <th class="fw-semibold small text-center" style="width: 20%;">STATUS LOKAL DB</th>
+                                                    <th class="fw-semibold small text-center pe-4" style="width: 20%;">AKSI</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 @forelse($usersHik as $u)
                                                     @php $isLocal = $karyawans->where('id_karyawan', (string)$u['pin'])->first(); @endphp
                                                     <tr>
-                                                        <td class="ps-4 fw-semibold {{ $isLocal ? 'text-dark' : 'text-danger' }}">{{ $u['pin'] }}</td>
-                                                        <td class="small text-truncate" style="max-width: 100px;">
-                                                            {{ $u['name'] ?: '-' }}
-                                                            @if(!$isLocal)<br><small class="text-danger" style="font-size:10px">Belum di-DB</small>@endif
+                                                        <td class="ps-4 fw-bold {{ $isLocal ? 'text-dark' : 'text-danger' }}">{{ $u['pin'] }}</td>
+                                                        <td>{{ $u['name'] ?: '-' }}</td>
+                                                        <td class="text-center">
+                                                            @if($isLocal)
+                                                                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Sinkron</span>
+                                                            @else
+                                                                <span class="badge bg-danger-subtle text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Belum di-DB</span>
+                                                            @endif
                                                         </td>
                                                         <td class="text-center pe-4">
                                                             <form action="{{ route('admin.mesin.hapus', ['mesin' => 'hikvision', 'pin' => $u['pin']]) }}" method="POST" onsubmit="return confirm('Hapus permanen PIN {{ $u['pin'] }} dari Hikvision?');">
                                                                 @csrf @method('DELETE')
-                                                                <button type="submit" class="btn btn-sm btn-outline-danger border-0"><i class="bi bi-trash"></i></button>
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Hapus</button>
                                                             </form>
                                                         </td>
                                                     </tr>
                                                 @empty
-                                                    <tr><td colspan="3" class="text-center py-4 text-muted small">Kosong</td></tr>
+                                                    <tr><td colspan="4" class="text-center py-4 text-muted small">Kosong</td></tr>
                                                 @endforelse
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Tabel Solution -->
-                        <div class="col-md-6">
-                            <div class="card border-0 shadow-sm rounded-4 h-100">
-                                <div class="card-header bg-white border-bottom-0 pt-4 pb-2 px-4 d-flex justify-content-between align-items-center">
-                                    <div class="d-flex align-items-center">
-                                        <i class="bi bi-fingerprint text-primary fs-5 me-2"></i>
-                                        <h6 class="fw-bold m-0 me-2 text-primary">Mesin Solution</h6>
-                                    </div>
-                                    <span class="badge bg-primary-subtle text-primary rounded-pill">{{ $totalSol }} user</span>
-                                </div>
-                                <div class="card-body p-0">
+                                
+                                <!-- Tab Solution -->
+                                <div class="tab-pane fade" id="sol" role="tabpanel">
                                     <div class="table-responsive">
                                         <table class="table table-hover align-middle mb-0">
                                             <thead class="table-light text-secondary">
                                                 <tr>
-                                                    <th class="ps-4 fw-semibold small" style="width:25%">PIN</th>
-                                                    <th class="fw-semibold small" style="width:50%">Nama</th>
-                                                    <th class="fw-semibold small text-center pe-4" style="width:25%">Aksi</th>
+                                                    <th class="ps-4 fw-semibold small" style="width: 20%;">PIN / ID</th>
+                                                    <th class="fw-semibold small" style="width: 40%;">NAMA DI MESIN</th>
+                                                    <th class="fw-semibold small text-center" style="width: 20%;">STATUS LOKAL DB</th>
+                                                    <th class="fw-semibold small text-center pe-4" style="width: 20%;">AKSI</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 @forelse($usersSol as $u)
                                                     @php $isLocal = $karyawans->where('id_karyawan', (string)$u['pin'])->first(); @endphp
                                                     <tr>
-                                                        <td class="ps-4 fw-semibold {{ $isLocal ? 'text-primary' : 'text-danger' }}">{{ $u['pin'] }}</td>
-                                                        <td class="small text-truncate" style="max-width: 100px;">
-                                                            {{ $u['name'] ?: '-' }}
-                                                            @if(!$isLocal)<br><small class="text-danger" style="font-size:10px">Belum di-DB</small>@endif
+                                                        <td class="ps-4 fw-bold {{ $isLocal ? 'text-primary' : 'text-danger' }}">{{ $u['pin'] }}</td>
+                                                        <td>{{ $u['name'] ?: '-' }}</td>
+                                                        <td class="text-center">
+                                                            @if($isLocal)
+                                                                <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Sinkron</span>
+                                                            @else
+                                                                <span class="badge bg-danger-subtle text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Belum di-DB</span>
+                                                            @endif
                                                         </td>
                                                         <td class="text-center pe-4">
                                                             <form action="{{ route('admin.mesin.hapus', ['mesin' => 'solution', 'pin' => $u['pin']]) }}" method="POST" onsubmit="return confirm('Hapus permanen PIN {{ $u['pin'] }} dari Solution?');">
                                                                 @csrf @method('DELETE')
-                                                                <button type="submit" class="btn btn-sm btn-outline-danger border-0"><i class="bi bi-trash"></i></button>
+                                                                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Hapus</button>
                                                             </form>
                                                         </td>
                                                     </tr>
                                                 @empty
-                                                    <tr><td colspan="3" class="text-center py-4 text-muted small">Kosong</td></tr>
+                                                    <tr><td colspan="4" class="text-center py-4 text-muted small">Kosong</td></tr>
                                                 @endforelse
                                             </tbody>
                                         </table>
@@ -353,11 +372,13 @@
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
+
         </div>
+    </div>
+</div>
     </div>
 </div>
 
