@@ -187,9 +187,58 @@ class HikvisionService
         return $logs;
     }
 
-    public function getFingerprintTemplate($id, $fn)
+    public function getRealTimeEvents()
     {
-        return []; 
+        $startTime = date('Y-m-d\T00:00:00P'); 
+        $endTime = date('Y-m-d\T23:59:59P');
+        
+        $data = json_encode([
+            "AcsEventCond" => [
+                "searchID" => "1",
+                "searchResultPosition" => 0,
+                "maxResults" => 2000, 
+                "major" => 5, 
+                "minor" => 0, 
+                "startTime" => $startTime,
+                "endTime" => $endTime
+            ]
+        ]);
+
+        $res = $this->request('/ISAPI/AccessControl/AcsEvent?format=json', 'POST', $data);
+        if ($res['http_code'] != 200) return [];
+        
+        $logData = json_decode($res['body'], true);
+        $events = $logData['AcsEvent']['InfoList'] ?? [];
+        
+        $mappedEvents = [];
+        foreach ($events as $evt) {
+            $minor = $evt['minor'] ?? 0;
+            $type = "Unknown Event";
+            
+            // Mapping Event Types
+            if ($minor == 21) $type = "Door Unlocked";
+            elseif ($minor == 22) $type = "Door Locked";
+            elseif ($minor == 23) $type = "Exit Button Pressed";
+            elseif ($minor == 24) $type = "Exit Button Released";
+            elseif ($minor == 38) $type = "Authenticated (Multi)";
+            elseif ($minor == 75) $type = "Authenticated via Fingerprint";
+            elseif ($minor == 73) $type = "Remote: Login";
+            else $type = "Event ($major:$minor)";
+
+            $timeStr = $evt['time'] ?? '';
+            $timestamp = $timeStr ? date('Y-m-d H:i:s', strtotime($timeStr)) : '-';
+            
+            $mappedEvents[] = [
+                'employee_id' => $evt['employeeNoString'] ?? '-',
+                'name'        => $evt['name'] ?? '-',
+                'card_no'     => $evt['cardNo'] ?? '-',
+                'event_type'  => $type,
+                'time'        => $timestamp,
+                'verify_mode' => $evt['currentVerifyMode'] ?? '-'
+            ];
+        }
+        
+        return array_slice(array_reverse($mappedEvents), 0, 10);
     }
 
     public function clearLogData()

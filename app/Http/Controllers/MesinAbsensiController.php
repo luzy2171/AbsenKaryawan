@@ -252,8 +252,29 @@ class MesinAbsensiController extends Controller
                 return back()->with('error', "Gagal membuka pintu mesin {$machine->machine_name}. HTTP Code: {$response['http_code']}");
             }
         } else {
-            // ZKTeco workaround or notification
-            return back()->with('error', "Fitur Buka Pintu secara remote saat ini hanya didukung untuk vendor Hikvision melalui ISAPI. Vendor Solution memerlukan integrasi ADMS / Wiegand terpisah.");
+            return back()->with('error', "Fitur Buka Pintu secara remote saat ini hanya didukung untuk vendor Hikvision.");
+        }
+    }
+
+    public function getHikEvents(Request $request)
+    {
+        $machineId = $request->query('machine_id');
+        if (!$machineId) {
+            return response()->json(['error' => 'No machine ID'], 400);
+        }
+
+        $machine = \App\Models\MachineStatus::find($machineId);
+        if (!$machine || $machine->machine_type != 'hikvision') {
+            return response()->json(['error' => 'Invalid Hikvision machine'], 400);
+        }
+
+        try {
+            $hikService = new HikvisionService();
+            $hikService->setConnection($machine->machine_ip, $machine->username, $machine->password, $machine->port);
+            $events = $hikService->getRealTimeEvents();
+            return response()->json(['events' => $events]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 }

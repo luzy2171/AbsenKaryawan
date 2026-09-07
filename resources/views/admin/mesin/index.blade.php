@@ -206,26 +206,55 @@
                     </div>
 
                     <!-- Real-Time Event & Controlled -->
-                    <div class="card border-0 shadow-sm rounded-4 mt-4 h-auto">
-                        <div class="card-header bg-dark text-white border-bottom-0 pt-3 pb-2 px-4 rounded-top-4">
+                    <div class="card border-0 shadow-sm rounded-4 mt-4 h-auto fade-in">
+                        <div class="card-header bg-dark text-white border-bottom-0 pt-3 pb-2 px-4 rounded-top-4 d-flex justify-content-between align-items-center">
                             <h6 class="fw-bold m-0"><i class="bi bi-shield-lock me-2"></i>Real-Time Event & Controlled</h6>
+                            <span class="badge bg-secondary rounded-pill" style="font-size: 10px;">Hikvision Only</span>
                         </div>
                         <div class="card-body p-4">
-                            <p class="text-muted small mb-3">Kontrol akses pintu dari jarak jauh (Remote Door Open) khusus perangkat yang didukung (Hikvision ISAPI).</p>
-                            <form action="{{ route('admin.mesin.door.open') }}" method="POST" onsubmit="return confirm('Yakin ingin membuka pintu ini sekarang?');">
-                                @csrf
-                                <div class="mb-3">
-                                    <select class="form-select bg-light border-0" name="machine_id" required>
-                                        <option value="">-- Pilih Pintu / Mesin --</option>
-                                        @foreach($machines as $m)
-                                            <option value="{{ $m->id }}">{{ $m->machine_name }} ({{ $m->machine_type == 'hikvision' ? 'Hikvision' : 'Solution' }})</option>
+                            <p class="text-muted small mb-3">Kontrol akses pintu dari jarak jauh dan pantau log aktivitas pintu secara real-time.</p>
+                            
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-8">
+                                    <select class="form-select bg-light border-0" id="live_machine_id">
+                                        <option value="">-- Pilih Pintu Hikvision untuk Dipantau --</option>
+                                        @foreach($machines->where('machine_type', 'hikvision') as $m)
+                                            <option value="{{ $m->id }}">{{ $m->machine_name }} ({{ $m->machine_ip }})</option>
                                         @endforeach
                                     </select>
                                 </div>
-                                <button type="submit" class="btn btn-warning w-100 fw-bold rounded-3 text-dark">
-                                    <i class="bi bi-unlock-fill me-2"></i> BUKA PINTU
-                                </button>
-                            </form>
+                                <div class="col-md-4">
+                                    <form action="{{ route('admin.mesin.door.open') }}" method="POST" id="doorOpenForm" onsubmit="return submitDoorOpen(event);">
+                                        @csrf
+                                        <input type="hidden" name="machine_id" id="door_machine_id">
+                                        <button type="submit" class="btn btn-warning w-100 fw-bold rounded-3 text-dark shadow-sm" id="btnOpenDoor" disabled>
+                                            <i class="bi bi-unlock-fill me-2"></i> BUKA PINTU
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive bg-light rounded-3 p-1">
+                                <table class="table table-borderless table-hover align-middle mb-0" style="font-size: 12px;">
+                                    <thead class="text-muted" style="border-bottom: 2px solid #e9ecef;">
+                                        <tr>
+                                            <th class="fw-semibold pb-2">TIME</th>
+                                            <th class="fw-semibold pb-2">EVENT TYPES</th>
+                                            <th class="fw-semibold pb-2">NAME</th>
+                                            <th class="fw-semibold pb-2">EMP. ID</th>
+                                            <th class="fw-semibold pb-2">VERIFY</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="liveEventTable">
+                                        <tr>
+                                            <td colspan="5" class="text-center py-4 text-muted">
+                                                <i class="bi bi-activity fs-3 d-block mb-2 opacity-50"></i>
+                                                Pilih mesin di atas untuk mulai memantau *Real-Time Events*.
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -476,6 +505,78 @@
         var modal = new bootstrap.Modal(document.getElementById('editDeviceModal'));
         modal.show();
     }
+
+    // Real-Time Event Polling
+    let pollingInterval = null;
+    const selectMachine = document.getElementById('live_machine_id');
+    const btnOpenDoor = document.getElementById('btnOpenDoor');
+    const hiddenMachineId = document.getElementById('door_machine_id');
+    const tableBody = document.getElementById('liveEventTable');
+
+    function submitDoorOpen(e) {
+        if (!hiddenMachineId.value) {
+            e.preventDefault();
+            alert("Pilih mesin terlebih dahulu!");
+            return false;
+        }
+        return confirm('Yakin ingin membuka pintu secara remote?');
+    }
+
+    function fetchEvents(machineId) {
+        fetch("{{ route('admin.mesin.door.events') }}?machine_id=" + machineId)
+            .then(response => response.json())
+            .then(data => {
+                if(data.events && data.events.length > 0) {
+                    tableBody.innerHTML = '';
+                    data.events.forEach(evt => {
+                        let colorClass = 'text-dark';
+                        let icon = 'bi-record-circle';
+                        
+                        if (evt.event_type.includes('Unlocked') || evt.event_type.includes('Login')) {
+                            colorClass = 'text-success'; icon = 'bi-unlock';
+                        } else if (evt.event_type.includes('Locked')) {
+                            colorClass = 'text-danger'; icon = 'bi-lock';
+                        } else if (evt.event_type.includes('Button')) {
+                            colorClass = 'text-warning'; icon = 'bi-box-arrow-right';
+                        } else if (evt.event_type.includes('Authenticated')) {
+                            colorClass = 'text-primary'; icon = 'bi-person-check';
+                        }
+
+                        let row = `<tr>
+                            <td class="text-muted">\${evt.time}</td>
+                            <td class="fw-semibold \${colorClass}"><i class="bi \${icon} me-1"></i>\${evt.event_type}</td>
+                            <td class="fw-bold">\${evt.name !== 'unknown' && evt.name !== '-' ? evt.name : '<span class="text-muted">--</span>'}</td>
+                            <td class="text-muted">\${evt.employee_id !== 'unknown' && evt.employee_id !== '-' ? evt.employee_id : '--'}</td>
+                            <td class="text-muted">\${evt.verify_mode !== 'invalid' && evt.verify_mode !== '-' ? evt.verify_mode.replace('faceOrFpOrCardOrPw', 'Multi-Verify').replace('fingerprint', 'Fingerprint') : '--'}</td>
+                        </tr>`;
+                        tableBody.innerHTML += row;
+                    });
+                } else if(data.events && data.events.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-3 text-muted">Belum ada event hari ini.</td></tr>`;
+                }
+            })
+            .catch(error => {
+                console.error("Error fetching events:", error);
+            });
+    }
+
+    selectMachine.addEventListener('change', function() {
+        if(pollingInterval) clearInterval(pollingInterval);
+        
+        const machineId = this.value;
+        if(machineId) {
+            btnOpenDoor.disabled = false;
+            hiddenMachineId.value = machineId;
+            tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>Memuat data live...</td></tr>`;
+            
+            fetchEvents(machineId); // Initial fetch
+            pollingInterval = setInterval(() => fetchEvents(machineId), 3000); // Poll every 3 seconds
+        } else {
+            btnOpenDoor.disabled = true;
+            hiddenMachineId.value = '';
+            tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted"><i class="bi bi-activity fs-3 d-block mb-2 opacity-50"></i>Pilih mesin di atas untuk mulai memantau *Real-Time Events*.</td></tr>`;
+        }
+    });
 </script>
 </body>
 </html>

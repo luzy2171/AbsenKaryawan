@@ -79,15 +79,9 @@
                             </a>
                         </li>
                                                 <li class="nav-item">
-                            <a class="nav-link {{ request()->is('admin/mesin-absensi/hikvision') ? 'active' : '' }}"
-                                href="{{ route('admin.mesin.hikvision') }}">
-                                <i class="bi bi-person-bounding-box me-2"></i> Mesin Hikvision
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link {{ request()->is('admin/mesin-absensi/solution') ? 'active' : '' }}"
-                                href="{{ route('admin.mesin.solution') }}">
-                                <i class="bi bi-fingerprint me-2"></i> Mesin Solution
+                            <a class="nav-link {{ request()->is('admin/mesin-absensi*') ? 'active' : '' }}"
+                                href="{{ route('admin.mesin.index') }}">
+                                <i class="bi bi-diagram-3 me-2"></i> Kontrol Pusat All Vendor
                             </a>
                         </li>
                 <li class="nav-item">
