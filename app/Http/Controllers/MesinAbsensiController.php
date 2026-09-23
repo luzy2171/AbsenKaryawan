@@ -3,12 +3,12 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Services\ZktecoService;
+use App\Services\SolutionX100CService;
 use App\Models\Karyawan;
 
 class MesinAbsensiController extends Controller
 {
-    public function index(ZktecoService $zkService)
+    public function index(SolutionX100CService $zkService)
     {
         $machines = \App\Models\MachineStatus::all();
 
@@ -28,7 +28,7 @@ class MesinAbsensiController extends Controller
         return view('admin.mesin.index', compact('machines', 'usersSol', 'totalSol', 'karyawans'));
     }
 
-    public function tarikDataAll(Request $request, ZktecoService $zkService)
+    public function tarikDataAll(Request $request, SolutionX100CService $zkService)
     {
         $mesinType = $request->mesin_tujuan;
         $users = [];
@@ -61,7 +61,7 @@ class MesinAbsensiController extends Controller
         return back()->with('status', "Berhasil menarik $berhasil data pengguna baru dari $mesinName ke database lokal.");
     }
 
-    public function kirimData(Request $request, ZktecoService $zkService)
+    public function kirimData(Request $request, SolutionX100CService $zkService)
     {
         $request->validate([
             'karyawan_id' => 'required',
@@ -81,7 +81,7 @@ class MesinAbsensiController extends Controller
         return back()->with('status', "Proses pengiriman $karyawan->nama (PIN: $karyawan->id_karyawan). Hasil: " . implode(" | ", $msg));
     }
 
-    public function hapusData($mesin, $pin, ZktecoService $zkService)
+    public function hapusData($mesin, $pin, SolutionX100CService $zkService)
     {
         $res = "Gagal";
         $machines = \App\Models\MachineStatus::all();
@@ -123,7 +123,7 @@ class MesinAbsensiController extends Controller
         return back()->with('status', "Data karyawan {$nama} berhasil dihapus DARI DATABASE LOKAL SAJA (Tetap ada di memori mesin).");
     }
 
-    public function cleanUnsynced($mesin, ZktecoService $zkService)
+    public function cleanUnsynced($mesin, SolutionX100CService $zkService)
     {
         $machines = \App\Models\MachineStatus::all();
         $localKaryawans = Karyawan::pluck('id_karyawan')->toArray();
@@ -202,7 +202,7 @@ class MesinAbsensiController extends Controller
         return redirect()->back()->with('status', "Device berhasil dihapus.");
     }
 
-    public function pingDevice($id, ZktecoService $zkService)
+    public function pingDevice($id, SolutionX100CService $zkService)
     {
         $machine = \App\Models\MachineStatus::findOrFail($id);
         $startTime = microtime(true);
@@ -223,3 +223,4 @@ class MesinAbsensiController extends Controller
             return redirect()->back()->with('error', "Ping gagal! {$machine->machine_name} Offline.");
         }
     }
+}

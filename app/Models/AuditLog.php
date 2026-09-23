@@ -47,12 +47,12 @@ class AuditLog extends Model
         string $status = 'success'
     ) {
         return self::create([
-            'user_id' => auth()->id(),
+            'user_id' => auth()->id() ?? null,
             'action' => $action,
             'module' => $module,
             'description' => $description,
-            'ip_address' => request()->ip(),
-            'user_agent' => request()->userAgent(),
+            'ip_address' => request() ? request()->ip() : null,
+            'user_agent' => request() ? request()->userAgent() : null,
             'old_values' => $oldValues,
             'new_values' => $newValues,
             'status' => $status,

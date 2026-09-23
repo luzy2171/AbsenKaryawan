@@ -97,7 +97,7 @@ class AbsensiController extends Controller
     /**
      * PERBAIKAN LOGIKA: Memproses Penarikan Data Log Mesin Berdasarkan Pengaturan Jam Kerja Dinamis (ANTI-DUPLIKASI)
      */
-    public function tarikDataDariMesin(\App\Services\ZktecoService $zktecoService)
+    public function tarikDataDariMesin(\App\Services\SolutionX100CService $zktecoService)
     {
         // Cegah eksekusi paralel jika tombol diklik berkali-kali
         $lock = \Illuminate\Support\Facades\Cache::lock('sync-absensi', 10);

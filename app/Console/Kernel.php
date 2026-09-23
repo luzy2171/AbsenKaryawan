@@ -5,7 +5,7 @@ namespace App\Console;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 use Illuminate\Support\Facades\DB;
-use App\Services\AbsensiService;
+
 use App\Events\AttendanceRecorded;
 
 class Kernel extends ConsoleKernel

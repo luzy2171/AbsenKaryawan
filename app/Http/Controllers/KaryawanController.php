@@ -50,7 +50,7 @@ class KaryawanController extends Controller
     /**
      * FITUR BARU: Sinkronisasi Otomatis Semua User dari Perangkat ke Database Web
      */
-    public function syncDariMesin(\App\Services\ZktecoService $zktecoService)
+    public function syncDariMesin(\App\Services\SolutionX100CService $zktecoService)
     {
         // Track waktu mulai untuk response time
         $startTime = microtime(true);
