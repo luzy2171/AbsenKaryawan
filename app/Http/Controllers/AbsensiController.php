@@ -111,16 +111,26 @@ class AbsensiController extends Controller
             $machines = \App\Models\MachineStatus::all();
 
             // 1. Tarik log absensi dari seluruh perangkat yang terdaftar di database
+            $connected = false;
             foreach ($machines as $m) {
                 $zktecoService->setConnection($m->machine_ip, $m->port);
                 $logs = $zktecoService->downloadLogTigaBulan();
                 $rawLogs = array_merge($rawLogs, (array)$logs);
-                $m->updateStatus(!empty($logs));
+                if (!empty($logs)) {
+                    $m->updateStatus(true);
+                    $connected = true;
+                } else {
+                    $m->updateStatus(false);
+                }
             }
-        
+
         if (empty($rawLogs)) {
             $lock->release();
-            return back()->with('error', 'Tidak ada data log absensi baru dalam 3 bulan terakhir atau koneksi mesin terputus.');
+            if (!$connected) {
+                return back()->with('error', 'Koneksi ke mesin absensi terputus. Pastikan mesin dalam keadaan nyala dan terhubung jaringan.');
+            }
+
+            return back()->with('error', 'Tidak ada data log absensi baru dalam 3 bulan terakhir.');
         }
 
         // Hitung response time
