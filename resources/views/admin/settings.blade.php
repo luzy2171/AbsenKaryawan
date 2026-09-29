@@ -43,6 +43,16 @@
                         <i class="bi bi-calendar-check me-2"></i> Absensi
                     </a>
                 </li>
+                @if(auth()->user()->isApprover())
+                <li class="nav-item mt-3">
+                    <small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">LAPORAN</small>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('laporan*') ? 'active' : '' }}" href="{{ url('/laporan/kehadiran') }}">
+                        <i class="bi bi-clipboard-data me-2"></i> Laporan Kehadiran
+                    </a>
+                </li>
+                @endif
                 @if(auth()->user()->isSuperadmin())
                 <li class="nav-item mt-3">
                     <small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small>
@@ -164,7 +174,7 @@
                             
                             <div class="setting-item">
                                 <label class="form-label fw-bold mb-3" for="jam_lembur_mulai">
-                                    <i class="bi bi-clock-fill text-purple me-2"></i>Jam Mulang Lembur
+                                    <i class="bi bi-clock-fill text-purple me-2"></i>Jam Mulai Lembur
                                 </label>
                                 <input type="time" name="jam_lembur_mulai" id="jam_lembur_mulai"
                                        value="{{ $settings['jam_lembur_mulai'] ?? '17:00' }}"
@@ -192,7 +202,7 @@
                                 </label>
                                 <div class="input-group">
                                     <input type="number" name="toleransi_terlambat" id="toleransi_terlambat"
-                                           value="{{ $settings['toleransi_terlambat'] ?? '15' }}"
+                                           value="{{ $settings['toleransi_terlambat'] ?? '15' }}" max="1440"
                                            class="form-control text-center fs-4 fw-bold" min="0" required>
                                     <span class="input-group-text text-muted fw-semibold">Menit</span>
                                 </div>

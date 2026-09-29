@@ -6,7 +6,7 @@
       "name": "NaraRouter",
       "options": {
         "baseURL": "https://router.bynara.id/v1",
-        "apiKey": "sk-nry-ep1jC2Ym6yxqfPQ4wc0wZIIeGRTU7On1FK4opmGDh0w"
+        "apiKey": "{env:NARAYA_API_KEY}"
       },
       "models": {
         "agnes-2.5-flash": {

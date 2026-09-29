@@ -5,101 +5,103 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Services\SolutionX100CService;
 use App\Models\Karyawan;
+use App\Models\MachineStatus;
+use App\Services\SolutionSoapService;
 
 class MesinAbsensiController extends Controller
 {
-    public function index(SolutionX100CService $zkService)
+    public function index(SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
-        $machines = \App\Models\MachineStatus::all();
-
-        // Ambil data user dari mesin Solution
+        $machines = MachineStatus::whereIn('machine_type', ['solution', 'x100c'])->orderByDesc('is_default')->orderBy('id')->get();
         $usersSol = [];
-        
-        foreach ($machines as $m) {
-            $zkService->setConnection($m->machine_ip, $m->port);
-            $usersSol = array_merge($usersSol, $zkService->getAllUsers());
-        }
-        
-        $totalSol = count($usersSol);
-        
-        // Ambil data user dari database lokal
-        $karyawans = Karyawan::orderBy('id_karyawan')->get();
-        
-        return view('admin.mesin.index', compact('machines', 'usersSol', 'totalSol', 'karyawans'));
-    }
+        $usersByMachine = [];
 
-    public function tarikDataAll(Request $request, SolutionX100CService $zkService)
-    {
-        $mesinType = $request->mesin_tujuan;
-        $users = [];
-        $mesinName = "";
-        
-        $machines = \App\Models\MachineStatus::all();
+        foreach ($machines as $machine) {
+            $service = $this->serviceForMachine($machine, $zkService, $soapService);
+            $machineUsers = $service->getAllUsers();
+            $machine->updateStatus($service->wasLastConnectionSuccessful());
+            $usersByMachine[$machine->id] = array_column($machineUsers, 'pin');
 
-        foreach ($machines as $m) {
-            $zkService->setConnection($m->machine_ip, $m->port);
-            $users = array_merge($users, (array)$zkService->getAllUsers());
-            $mesinName = "Solution";
-        }
-
-        $berhasil = 0;
-        foreach ($users as $u) {
-            // Cek apakah sudah ada di DB lokal berdasarkan ID/PIN
-            if (isset($u['pin']) && $u['pin'] != '') {
-                $exist = Karyawan::where('id_karyawan', $u['pin'])->first();
-                if (!$exist) {
-                    Karyawan::create([
-                        'id_karyawan' => $u['pin'],
-                        'nama' => $u['name'] ?: 'User ' . $u['pin'],
-                        'status' => 'Aktif'
-                    ]);
-                    $berhasil++;
-                }
+            foreach ($machineUsers as $user) {
+                $user['machine_id'] = $machine->id;
+                $user['machine_name'] = $machine->machine_name;
+                $usersSol[] = $user;
             }
         }
 
-        return back()->with('status', "Berhasil menarik $berhasil data pengguna baru dari $mesinName ke database lokal.");
+        $karyawans = Karyawan::orderBy('id_karyawan')->get();
+
+        return view('admin.mesin.index', compact('machines', 'usersSol', 'usersByMachine', 'karyawans'));
     }
 
-    public function kirimData(Request $request, SolutionX100CService $zkService)
+    public function tarikDataAll(Request $request, SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
         $request->validate([
-            'karyawan_id' => 'required',
-            'mesin_tujuan' => 'required|in:solution,all'
+            'machine_id' => 'required|integer|exists:machine_status,id',
         ]);
 
-        $karyawan = Karyawan::findOrFail($request->karyawan_id);
-        $machines = \App\Models\MachineStatus::all();
-        $msg = [];
+        $machine = $this->solutionMachine($request->integer('machine_id'));
+        $service = $this->serviceForMachine($machine, $zkService, $soapService);
+        $users = $service->getAllUsers();
+        $machine->updateStatus($service->wasLastConnectionSuccessful());
 
-        foreach ($machines as $m) {
-            $zkService->setConnection($m->machine_ip, $m->port);
-            $resSol = $zkService->uploadNama($karyawan->id_karyawan, $karyawan->nama);
-            $msg[] = "Solution ({$m->machine_name}): $resSol";
+        $berhasil = 0;
+        foreach ($users as $user) {
+            if (empty($user['pin'])) {
+                continue;
+            }
+
+            if (!Karyawan::where('id_karyawan', $user['pin'])->exists()) {
+                Karyawan::create([
+                    'id_karyawan' => $user['pin'],
+                    'nama' => $user['name'] ?: 'User ' . $user['pin'],
+                    'status' => 'Aktif',
+                ]);
+                $berhasil++;
+            }
         }
 
-        return back()->with('status', "Proses pengiriman $karyawan->nama (PIN: $karyawan->id_karyawan). Hasil: " . implode(" | ", $msg));
+        return back()->with('status', "Berhasil menarik {$berhasil} data pengguna baru dari {$machine->machine_name} ke database lokal.");
     }
 
-    public function hapusData($mesin, $pin, SolutionX100CService $zkService)
+    public function kirimData(Request $request, SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
-        $res = "Gagal";
-        $machines = \App\Models\MachineStatus::all();
-        $msg = [];
-        
-        foreach ($machines as $m) {
-            $zkService->setConnection($m->machine_ip, $m->port);
-            $r = $zkService->hapusUser($pin);
-            $msg[] = "{$m->machine_name}: $r";
+        $request->validate([
+            'karyawan_id' => 'required|integer|exists:karyawans,id',
+            'machine_id' => 'required|integer|exists:machine_status,id',
+        ]);
+
+        $karyawan = Karyawan::findOrFail($request->integer('karyawan_id'));
+        $machine = $this->solutionMachine($request->integer('machine_id'));
+        $service = $this->serviceForMachine($machine, $zkService, $soapService);
+        $result = $service->uploadNama($karyawan->id_karyawan, $karyawan->nama);
+        $machine->updateStatus($service->wasLastConnectionSuccessful());
+
+        if ($result !== 'Sukses') {
+            return back()->with('error', "Gagal mengirim {$karyawan->nama} ke {$machine->machine_name}.");
         }
 
-        return back()->with('status', "Berhasil menghapus PIN $pin dari mesin. Detail: " . implode(" | ", $msg));
+        return back()->with('status', "{$karyawan->nama} (PIN: {$karyawan->id_karyawan}) berhasil dikirim ke {$machine->machine_name}.");
+    }
+
+    public function hapusData($mesin, $pin, SolutionX100CService $zkService, SolutionSoapService $soapService)
+    {
+        $machine = $this->routeMachine($mesin);
+        $service = $this->serviceForMachine($machine, $zkService, $soapService);
+        $result = $service->hapusUser($pin);
+        $machine->updateStatus($service->wasLastConnectionSuccessful());
+
+        if ($result !== 'Sukses') {
+            return back()->with('error', "Gagal menghapus PIN {$pin} dari {$machine->machine_name}.");
+        }
+
+        return back()->with('status', "PIN {$pin} berhasil dihapus dari {$machine->machine_name}.");
     }
 
     public function updateKaryawan(Request $request, $id)
     {
         $karyawan = Karyawan::findOrFail($id);
-        
+
         $request->validate([
             'nama' => 'required|string|max:255',
             'departemen' => 'nullable|string|max:255',
@@ -120,107 +122,175 @@ class MesinAbsensiController extends Controller
         $karyawan = Karyawan::findOrFail($id);
         $nama = $karyawan->nama;
         $karyawan->delete();
+
         return back()->with('status', "Data karyawan {$nama} berhasil dihapus DARI DATABASE LOKAL SAJA (Tetap ada di memori mesin).");
     }
 
-    public function cleanUnsynced($mesin, SolutionX100CService $zkService)
+    public function cleanUnsynced($mesin, SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
-        $machines = \App\Models\MachineStatus::all();
-        $localKaryawans = Karyawan::pluck('id_karyawan')->toArray();
+        $machine = $this->routeMachine($mesin);
+        $localKaryawans = array_map('strval', Karyawan::pluck('id_karyawan')->toArray());
+        $service = $this->serviceForMachine($machine, $zkService, $soapService);
+        $users = $service->getAllUsers();
         $deletedCount = 0;
         $failedCount = 0;
 
-        foreach ($machines as $m) {
-            $zkService->setConnection($m->machine_ip, $m->port);
-            $users = $zkService->getAllUsers();
-            foreach ($users as $u) {
-                if (!in_array((string)$u['pin'], $localKaryawans)) {
-                    $res = $zkService->hapusUser($u['pin']);
-                    if ($res == "Sukses") $deletedCount++;
-                    else $failedCount++;
+        foreach ($users as $user) {
+            if (!in_array((string) $user['pin'], $localKaryawans, true)) {
+                $result = $service->hapusUser($user['pin']);
+                if ($result === 'Sukses') {
+                    $deletedCount++;
+                } else {
+                    $failedCount++;
                 }
             }
         }
 
-        return back()->with('status', "Pembersihan selesai! $deletedCount data asing berhasil dihapus dari memori mesin Solution." . ($failedCount > 0 ? " ($failedCount gagal)" : ""));
+        $message = "Pembersihan selesai! {$deletedCount} data asing berhasil dihapus dari {$machine->machine_name}.";
+        if ($failedCount > 0) {
+            $message .= " ({$failedCount} gagal)";
+        }
+
+        return back()->with('status', $message);
     }
 
     public function storeDevice(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'machine_ip' => 'required|ip|unique:machine_status,machine_ip',
             'machine_name' => 'required|string|max:255',
-            'machine_type' => 'required|in:solution',
-            'port' => 'required|numeric',
+            'machine_type' => 'required|in:solution,x100c',
+            'port' => 'required|integer|min:1|max:65535',
+            'username' => 'nullable|string|max:255',
+            'password' => 'nullable|string|max:255',
         ]);
 
-        \App\Models\MachineStatus::create([
-            'machine_ip' => $request->machine_ip,
-            'machine_name' => $request->machine_name,
-            'machine_type' => $request->machine_type,
-            'port' => $request->port,
-            'username' => $request->username,
-            'password' => $request->password,
+        MachineStatus::create([
+            'machine_ip' => $validated['machine_ip'],
+            'machine_name' => $validated['machine_name'],
+            'machine_type' => $validated['machine_type'],
+            'port' => $validated['port'],
+            'username' => $validated['username'] ?? null,
+            'password' => $validated['password'] ?? null,
             'status' => 'offline',
+            'is_default' => MachineStatus::count() === 0,
         ]);
 
-        return redirect()->back()->with('status', "Device {$request->machine_name} berhasil ditambahkan!");
+        return redirect()->back()->with('status', "Device {$validated['machine_name']} berhasil ditambahkan!");
     }
-    
+
     public function updateDevice(Request $request, $id)
     {
-        $machine = \App\Models\MachineStatus::findOrFail($id);
-        
-        $request->validate([
-            'machine_ip' => 'required|ip|unique:machine_status,machine_ip,'.$id,
+        $machine = MachineStatus::findOrFail($id);
+
+        $validated = $request->validate([
+            'machine_ip' => 'required|ip|unique:machine_status,machine_ip,' . $machine->id,
             'machine_name' => 'required|string|max:255',
-            'machine_type' => 'required|in:solution',
-            'port' => 'required|numeric',
+            'machine_type' => 'required|in:solution,x100c',
+            'port' => 'required|integer|min:1|max:65535',
+            'username' => 'nullable|string|max:255',
+            'password' => 'nullable|string|max:255',
         ]);
 
-        $updateData = [
-            'machine_ip' => $request->machine_ip,
-            'machine_name' => $request->machine_name,
-            'machine_type' => $request->machine_type,
-            'port' => $request->port,
-            'username' => $request->username,
-        ];
+        $machine->update([
+            'machine_ip' => $validated['machine_ip'],
+            'machine_name' => $validated['machine_name'],
+            'machine_type' => $validated['machine_type'],
+            'port' => $validated['port'],
+        ]);
+
+        if ($request->filled('username')) {
+            $machine->update(['username' => $validated['username']]);
+        }
 
         if ($request->filled('password')) {
-            $updateData['password'] = $request->password;
+            $machine->update(['password' => $validated['password']]);
         }
 
-        $machine->update($updateData);
-
-        return redirect()->back()->with('status', "Device {$request->machine_name} berhasil diperbarui!");
+        return redirect()->back()->with('status', "Device {$validated['machine_name']} berhasil diperbarui!");
     }
-    
+
     public function destroyDevice($id)
     {
-        $machine = \App\Models\MachineStatus::findOrFail($id);
+        $machine = MachineStatus::findOrFail($id);
+        $wasDefault = $machine->isDefault();
         $machine->delete();
-        return redirect()->back()->with('status', "Device berhasil dihapus.");
+
+        if ($wasDefault) {
+            $replacement = MachineStatus::whereIn('machine_type', ['solution', 'x100c'])->orderBy('id')->first();
+            if ($replacement) {
+                $replacement->update(['is_default' => true]);
+            }
+        }
+
+        return redirect()->back()->with('status', 'Device berhasil dihapus.');
     }
 
-    public function pingDevice($id, SolutionX100CService $zkService)
+    public function pingDevice($id, SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
-        $machine = \App\Models\MachineStatus::findOrFail($id);
+        $machine = $this->solutionMachine($id);
         $startTime = microtime(true);
-        
-        $zkService->setConnection($machine->machine_ip, $machine->port);
-        $isOnline = false;
-        if ($zkService->connect()) {
-            $isOnline = true;
-            $zkService->connect()->disconnect();
+        $service = $this->serviceForMachine($machine, $zkService, $soapService);
+        $isOnline = $service instanceof SolutionSoapService ? $service->ping() : $service->connect();
+        if ($isOnline && $service instanceof SolutionX100CService) {
+            $service->disconnect();
         }
-        
         $responseTime = round((microtime(true) - $startTime) * 1000);
-        $machine->updateStatus($isOnline, $responseTime);
-        
+        $machine->updateStatus($isOnline, $isOnline ? $responseTime : null);
+
         if ($isOnline) {
             return redirect()->back()->with('status', "Ping berhasil! {$machine->machine_name} Online (Response: {$responseTime}ms).");
-        } else {
-            return redirect()->back()->with('error', "Ping gagal! {$machine->machine_name} Offline.");
         }
+
+        return redirect()->back()->with('error', "Ping gagal! {$machine->machine_name} Offline.");
+    }
+
+    protected function solutionMachine($id)
+    {
+        return MachineStatus::whereIn('machine_type', ['solution', 'x100c'])->findOrFail($id);
+    }
+
+    protected function routeMachine($identifier)
+    {
+        if (is_numeric($identifier)) {
+            return $this->solutionMachine((int) $identifier);
+        }
+
+        $machine = MachineStatus::defaultForType('solution');
+        abort_unless($machine, 404, 'Mesin Solution tidak ditemukan.');
+        return $machine;
+    }
+
+    /**
+     * Pilih service yang sesuai dengan transport mesin.
+     * Solution memakai SOAP, sedangkan tipe lain memakai protokol biner.
+     */
+    protected function serviceForMachine($machine, SolutionX100CService $zkService, SolutionSoapService $soapService)
+    {
+        if ($this->usesSoapTransport($machine)) {
+            $soapService->setConnection(
+                $machine->machine_ip,
+                (int) env('SOLUTION_SOAP_PORT', 80),
+                $machine->username
+            );
+            return $soapService;
+        }
+
+        $zkService->setConnection($machine->machine_ip, $machine->port ?? 4370);
+        return $zkService;
+    }
+
+    protected function usesSoapTransport($machine): bool
+    {
+        $transport = strtolower((string) env('SOLUTION_TRANSPORT', 'soap'));
+        if ($transport === 'soap') {
+            return true;
+        }
+
+        if ($transport === 'binary') {
+            return false;
+        }
+
+        return (int) ($machine->port ?? 0) === 80;
     }
 }

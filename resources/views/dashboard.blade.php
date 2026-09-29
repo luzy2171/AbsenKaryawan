@@ -49,6 +49,16 @@
                         </a>
                     </li>
                     @if(auth()->user()->isApprover())
+                    <li class="nav-item mt-3">
+                        <small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">LAPORAN</small>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->is('laporan*') ? 'active' : '' }}" href="{{ url('/laporan/kehadiran') }}">
+                            <i class="bi bi-clipboard-data me-2"></i> Laporan Kehadiran
+                        </a>
+                    </li>
+                    @endif
+                    @if(auth()->user()->isApprover())
                         <li class="nav-item mt-3">
                             <small class="text-muted px-3 fw-semibold"
                                 style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small>

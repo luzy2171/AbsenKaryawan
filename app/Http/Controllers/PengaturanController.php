@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Services\SolutionX100CService;
+use App\Services\SolutionSoapService;
 use App\Helpers\AuditLogger;
 use App\Models\MachineStatus;
 use App\Models\Karyawan;
@@ -13,9 +14,9 @@ class PengaturanController extends Controller
     /**
      * Mengakses Halaman Dashboard Menu Pengaturan Alat
      */
-    public function index(SolutionX100CService $zkService, Request $request)
+    public function index(SolutionX100CService $zkService, SolutionSoapService $soapService, Request $request)
     {
-        $machineStatuses = MachineStatus::all();
+        $machineStatuses = MachineStatus::orderByDesc('is_default')->orderBy('id')->get();
         $primaryMachine = $this->getPrimaryMachine();
 
         $users = [];
@@ -23,28 +24,18 @@ class PengaturanController extends Controller
         $templates = [];
         $currentMachine = null;
 
-        // Try device connection first via ping so we get correct online/offline state
         if ($primaryMachine) {
+            $service = $this->serviceForMachine($primaryMachine, $zkService, $soapService);
             $pingTime = microtime(true);
-            $pingConn = @stream_socket_client(
-                "tcp://{$primaryMachine->machine_ip}:{$primaryMachine->port}",
-                $errno,
-                $errstr,
-                3
-            );
-            if ($pingConn) {
-                fclose($pingConn);
-                $primaryMachine->updateStatus(true, round((microtime(true) - $pingTime) * 1000));
-            } else {
-                $primaryMachine->updateStatus(false);
-            }
+            $isOnline = $this->pingService($service);
+            $primaryMachine->updateStatus($isOnline, $isOnline ? round((microtime(true) - $pingTime) * 1000) : null);
             $currentMachine = MachineStatus::find($primaryMachine->id);
         }
 
         $shouldViewUsers = $request->has('view_users') || (!$request->has('view_logs') && !$request->has('download_fp'));
 
         if ($shouldViewUsers && $primaryMachine) {
-            list($users, $connected) = $this->getUsersFromMachineWithStatus($zkService, $primaryMachine);
+            list($users, $connected) = $this->getUsersFromMachineWithStatus($service, $primaryMachine);
             if (!$connected) {
                 $primaryMachine->updateStatus(false);
                 $currentMachine = MachineStatus::find($primaryMachine->id);
@@ -52,14 +43,17 @@ class PengaturanController extends Controller
         }
 
         if ($request->has('view_logs') && $primaryMachine) {
-            list($logs, $connected) = $this->getLogsFromMachineWithStatus($zkService, $primaryMachine);
+            list($logs, $connected) = $this->getLogsFromMachineWithStatus($service, $primaryMachine);
             if (!$connected) {
                 $primaryMachine->updateStatus(false);
                 $currentMachine = MachineStatus::find($primaryMachine->id);
             }
         }
 
-        return view('pengaturan.index', compact('users', 'logs', 'templates', 'machineStatuses', 'currentMachine'));
+        $solutionTransport = strtolower((string) env('SOLUTION_TRANSPORT', 'soap'));
+        $solutionSoapPort = (int) env('SOLUTION_SOAP_PORT', 80);
+
+        return view('pengaturan.index', compact('users', 'logs', 'templates', 'machineStatuses', 'currentMachine', 'solutionTransport', 'solutionSoapPort'));
     }
 
     /**
@@ -70,12 +64,14 @@ class PengaturanController extends Controller
         $request->validate([
             'machine_ip' => 'required|ip|unique:machine_status,machine_ip',
             'machine_name' => 'required|string|max:255',
-            'port' => 'nullable|integer',
+            'machine_type' => 'nullable|in:solution,x100c',
+            'port' => 'nullable|integer|min:1|max:65535',
         ]);
 
         $machine = MachineStatus::create([
             'machine_ip' => $request->machine_ip,
             'machine_name' => $request->machine_name,
+            'machine_type' => $request->machine_type ?? 'solution',
             'port' => $request->port ?? 4370,
             'status' => 'offline',
             'is_default' => MachineStatus::count() === 0,
@@ -114,7 +110,15 @@ class PengaturanController extends Controller
         $ip = $machine->machine_ip;
         $name = $machine->machine_name;
 
+        $wasDefault = $machine->isDefault();
         $machine->delete();
+
+        if ($wasDefault) {
+            $replacement = MachineStatus::whereIn('machine_type', ['solution', 'x100c'])->orderBy('id')->first();
+            if ($replacement) {
+                $replacement->update(['is_default' => true]);
+            }
+        }
 
         AuditLogger::machineDeleted($ip, $name);
 
@@ -124,22 +128,19 @@ class PengaturanController extends Controller
     /**
      * Ping mesin untuk cek status
      */
-    public function pingMachine($id)
+    public function pingMachine(SolutionX100CService $zkService, SolutionSoapService $soapService, $id)
     {
-        $machine = MachineStatus::findOrFail($id);
-
+        $machine = MachineStatus::whereIn('machine_type', ['solution', 'x100c'])->findOrFail($id);
         $startTime = microtime(true);
-        $connection = @stream_socket_client("tcp://{$machine->machine_ip}:{$machine->port}", $errno, $errstr, 3);
-        $responseTime = $connection ? round((microtime(true) - $startTime) * 1000) : null;
+        $service = $this->serviceForMachine($machine, $zkService, $soapService);
+        $isOnline = $this->pingService($service);
 
-        if ($connection) {
-            fclose($connection);
-            $machine->updateStatus(true, $responseTime);
-            $message = "Mesin {$machine->machine_name} berhasil di-ping! Response: {$responseTime}ms";
-        } else {
-            $machine->updateStatus(false);
-            $message = "Mesin {$machine->machine_name} tidak dapat dihubungi!";
-        }
+        $responseTime = $isOnline ? round((microtime(true) - $startTime) * 1000) : null;
+        $machine->updateStatus($isOnline, $responseTime);
+
+        $message = $isOnline
+            ? "Mesin {$machine->machine_name} berhasil di-ping! Response: {$responseTime}ms"
+            : "Mesin {$machine->machine_name} tidak dapat dihubungi!";
 
         return back()->with('status', $message);
     }
@@ -149,10 +150,12 @@ class PengaturanController extends Controller
      */
     public function setDefaultMachine($id)
     {
-        MachineStatus::query()->update(['is_default' => false]);
+        $machine = MachineStatus::whereIn('machine_type', ['solution', 'x100c'])->findOrFail($id);
 
-        $machine = MachineStatus::findOrFail($id);
-        $machine->update(['is_default' => true]);
+        MachineStatus::transaction(function () use ($machine) {
+            MachineStatus::query()->update(['is_default' => false]);
+            $machine->update(['is_default' => true]);
+        });
 
         return redirect()->back()->with('status', "Mesin {$machine->machine_name} berhasil dijadikan default!");
     }
@@ -160,19 +163,19 @@ class PengaturanController extends Controller
     /**
      * Proses Kosongkan Log Transaksi Mesin Absensi
      */
-    public function clearMachineLogs(SolutionX100CService $zkService)
+    public function clearMachineLogs(SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
         $machine = $this->getPrimaryMachine();
         if (!$machine) {
             return back()->with('error', 'Tidak ada mesin yang dipilih. Tentukan mesin terlebih dahulu.');
         }
 
-        $result = $this->executeOnMachine($zkService, $machine, function ($s, $m) {
+        $result = $this->executeOnMachine($zkService, $soapService, $machine, function ($s, $m) {
             return $s->clearLogData();
         });
 
-        if ($result === "Koneksi Gagal") {
-            return back()->with('error', 'Gagal terhubung dengan mesin absensi.');
+        if ($result !== 'Sukses') {
+            return back()->with('error', 'Gagal membersihkan log mesin absensi.');
         }
 
         $machine->updateStatus(true);
@@ -184,23 +187,26 @@ class PengaturanController extends Controller
     /**
      * Proses Hapus User Langsung dari Menu Pengaturan
      */
-    public function hapusUserDariMesin(Request $request, SolutionX100CService $zkService)
+    public function hapusUserDariMesin(Request $request, SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
         $request->validate([
-            'user_id' => 'required',
+            'machine_id' => 'nullable|integer|exists:machine_status,id',
+            'user_id' => ['required', 'regex:/^\d{1,9}$/'],
         ]);
 
-        $machine = $this->getPrimaryMachine();
+        $machine = $request->filled('machine_id')
+            ? MachineStatus::whereIn('machine_type', ['solution', 'x100c'])->findOrFail($request->integer('machine_id'))
+            : $this->getPrimaryMachine();
         if (!$machine) {
             return back()->with('error', 'Tidak ada mesin yang dipilih.');
         }
 
-        $result = $this->executeOnMachine($zkService, $machine, function ($s, $m) use ($request) {
+        $result = $this->executeOnMachine($zkService, $soapService, $machine, function ($s, $m) use ($request) {
             return $s->hapusUser($request->input('user_id'));
         });
 
-        if ($result === "Koneksi Gagal") {
-            return back()->with('error', 'Gagal terhubung dengan mesin absensi.');
+        if ($result !== 'Sukses') {
+            return back()->with('error', 'Gagal menghapus user dari mesin absensi.');
         }
 
         $machine->updateStatus(true);
@@ -212,18 +218,18 @@ class PengaturanController extends Controller
     /**
      * Memproses Sinkronisasi Waktu Server ke Perangkat Absensi Fisik
      */
-    public function synchronizeDeviceTime(SolutionX100CService $zkService)
+    public function synchronizeDeviceTime(SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
         $machine = $this->getPrimaryMachine();
         if (!$machine) {
             return back()->with('error', 'Tidak ada mesin yang dipilih.');
         }
 
-        $result = $this->executeOnMachine($zkService, $machine, function ($s, $m) {
+        $result = $this->executeOnMachine($zkService, $soapService, $machine, function ($s, $m) {
             return $s->syncTime();
         });
 
-        if ($result === "Koneksi Gagal") {
+        if (!is_string($result) || !str_starts_with($result, 'Waktu berhasil')) {
             return back()->with('error', 'Gagal menyamakan waktu. Koneksi ke mesin terputus.');
         }
 
@@ -236,18 +242,18 @@ class PengaturanController extends Controller
     /**
      * Memproses Perintah Restart Mesin Absensi Fisik
      */
-    public function restartMachine(SolutionX100CService $zkService)
+    public function restartMachine(SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
         $machine = $this->getPrimaryMachine();
         if (!$machine) {
             return back()->with('error', 'Tidak ada mesin yang dipilih.');
         }
 
-        $result = $this->executeOnMachine($zkService, $machine, function ($s, $m) {
+        $result = $this->executeOnMachine($zkService, $soapService, $machine, function ($s, $m) {
             return $s->restartDevice();
         });
 
-        if ($result === "Koneksi Gagal") {
+        if ($result !== 'Sukses') {
             return back()->with('error', 'Gagal merestart perangkat. Koneksi ke mesin terputus.');
         }
 
@@ -260,94 +266,78 @@ class PengaturanController extends Controller
 
     protected function getPrimaryMachine()
     {
-        return MachineStatus::where('is_default', true)->first() ?? MachineStatus::first();
+        return MachineStatus::defaultForType('solution');
     }
 
-    protected function executeOnMachine(SolutionX100CService $zkService, $machine, callable $callback)
+    protected function executeOnMachine(SolutionX100CService $zkService, SolutionSoapService $soapService, $machine, callable $callback)
     {
-        $zkService->setConnection($machine->machine_ip, $machine->port ?? 4370);
-        return $callback($zkService, $machine);
+        $service = $this->serviceForMachine($machine, $zkService, $soapService);
+        return $callback($service, $machine);
     }
 
-    protected function getUsersFromMachine(SolutionX100CService $zkService, $machine)
+    protected function serviceForMachine($machine, SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
-        if (!$machine) return [];
+        if ($this->usesSoapTransport($machine)) {
+            $soapService->setConnection(
+                $machine->machine_ip,
+                (int) env('SOLUTION_SOAP_PORT', 80),
+                $machine->username
+            );
+            return $soapService;
+        }
+
         $zkService->setConnection($machine->machine_ip, $machine->port ?? 4370);
-        return $zkService->getAllUsers();
+        return $zkService;
     }
 
-    /**
-     * Get users from machine AND return whether connection was successful
-     * Returns [array $users, bool $connected]
-     */
-    protected function getUsersFromMachineWithStatus(SolutionX100CService $zkService, $machine)
+    protected function usesSoapTransport($machine): bool
+    {
+        $transport = strtolower((string) env('SOLUTION_TRANSPORT', 'soap'));
+        if ($transport === 'soap') {
+            return true;
+        }
+
+        if ($transport === 'binary') {
+            return false;
+        }
+
+        return (int) ($machine->port ?? 0) === 80;
+    }
+
+    protected function pingService($service): bool
+    {
+        if ($service instanceof SolutionSoapService) {
+            return $service->ping();
+        }
+
+        if ($service instanceof SolutionX100CService) {
+            $online = $service->connect();
+            if ($online) {
+                $service->disconnect();
+            }
+            return $online;
+        }
+
+        return false;
+    }
+
+    protected function getUsersFromMachineWithStatus($service, $machine)
     {
         if (!$machine) return [[], false];
-        $zkService->setConnection($machine->machine_ip, $machine->port ?? 4370);
-        $users = $zkService->getAllUsers();
-        // If connect() failed inside getAllUsers(), the service disconnects internally.
-        // We detect by checking if stream is null (service closed it due to failure).
-        // Since getAllUsers() returns [] on failure, we re-attempt connect to know the real state.
-        $connected = true;
-        if (empty($users)) {
-            $testStream = @stream_socket_client(
-                "tcp://{$machine->machine_ip}:{$machine->port}",
-                $errno,
-                $errstr,
-                3
-            );
-            if (!$testStream) {
-                $connected = false;
-            } else {
-                fclose($testStream);
-            }
-        }
-        return [$users, $connected];
+        $users = $service->getAllUsers();
+        return [$users, $service->wasLastConnectionSuccessful()];
     }
 
-    protected function getLogsFromMachine(SolutionX100CService $zkService, $machine)
+    protected function getLogsFromMachineWithStatus($service, $machine)
     {
-        if (!$machine) return [];
-        $zkService->setConnection($machine->machine_ip, $machine->port ?? 4370);
-        $logs = $zkService->downloadLogTigaBulan();
+        if (!$machine) return [[], false];
+        $logs = $service->downloadLogTigaBulan();
 
         foreach ($logs as &$log) {
             $karyawan = Karyawan::where('id_karyawan', $log['pin'])->first();
             $log['name'] = $karyawan ? $karyawan->nama : '-';
         }
 
-        return $logs;
-    }
-
-    /**
-     * Get logs from machine AND return whether connection was successful
-     * Returns [array $logs, bool $connected]
-     */
-    protected function getLogsFromMachineWithStatus(SolutionX100CService $zkService, $machine)
-    {
-        if (!$machine) return [[], false];
-        $zkService->setConnection($machine->machine_ip, $machine->port ?? 4370);
-        $logs = $zkService->downloadLogTigaBulan();
-
-        foreach ($logs as &$log) {
-            $karyawan = Karyawan::where('id_karyawan', $log['pin'])->first();
-            $log['name'] = $karyawan ? $karyawan->nama : '-';
-        }
-
-        $connected = true;
-        if (empty($logs)) {
-            $testStream = @stream_socket_client(
-                "tcp://{$machine->machine_ip}:{$machine->port}",
-                $errno,
-                $errstr,
-                3
-            );
-            if (!$testStream) {
-                $connected = false;
-            } else {
-                fclose($testStream);
-            }
-        }
-        return [$logs, $connected];
+        return [$logs, $service->wasLastConnectionSuccessful()];
     }
 }

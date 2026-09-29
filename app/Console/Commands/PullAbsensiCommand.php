@@ -8,13 +8,14 @@ use Illuminate\Support\Facades\Storage;
 use App\Models\Attendance;
 use Carbon\Carbon;
 use App\Helpers\AuditLogger;
+use App\Services\SolutionSoapService;
 
 class PullAbsensiCommand extends Command
 {
     protected $signature = 'absensi:pull';
     protected $description = 'Tarik data absensi dari mesin dan hapus data absen lama (lebih dari 4 bulan)';
 
-    public function handle(SolutionX100CService $zktecoService)
+    public function handle(SolutionX100CService $zktecoService, SolutionSoapService $soapService)
     {
         $autoPullStatus = Storage::exists('auto_pull_status.txt') ? Storage::get('auto_pull_status.txt') : 'OFF';
 
@@ -22,13 +23,13 @@ class PullAbsensiCommand extends Command
             $this->info('Memulai penarikan data absensi...');
             
             $rawLogs = [];
-            $machines = \App\Models\MachineStatus::all();
+            $machines = \App\Models\MachineStatus::whereIn('machine_type', ['solution', 'x100c'])->get();
 
             foreach ($machines as $m) {
-                $zktecoService->setConnection($m->machine_ip, $m->port);
-                $logs = $zktecoService->downloadLogTigaBulan();
-                $rawLogs = array_merge($rawLogs, (array)$logs);
-                $m->updateStatus(!empty($logs));
+                $service = $this->serviceForMachine($m, $zktecoService, $soapService);
+                $logs = $service->downloadLogTigaBulan();
+                $rawLogs = array_merge($rawLogs, (array) $logs);
+                $m->updateStatus($service->wasLastConnectionSuccessful());
             }
             
             if (empty($rawLogs)) {
@@ -121,5 +122,21 @@ class PullAbsensiCommand extends Command
         } else {
             $this->info('Tidak ada data lama yang perlu dihapus.');
         }
+    }
+
+    protected function serviceForMachine($machine, SolutionX100CService $binaryService, SolutionSoapService $soapService)
+    {
+        $transport = strtolower((string) env('SOLUTION_TRANSPORT', 'soap'));
+        if ($transport !== 'binary' && ($transport === 'soap' || (int) ($machine->port ?? 0) === 80)) {
+            $soapService->setConnection(
+                $machine->machine_ip,
+                (int) env('SOLUTION_SOAP_PORT', 80),
+                $machine->username
+            );
+            return $soapService;
+        }
+
+        $binaryService->setConnection($machine->machine_ip, $machine->port ?? 4370);
+        return $binaryService;
     }
 }

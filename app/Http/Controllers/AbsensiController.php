@@ -11,9 +11,26 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use App\Helpers\AuditLogger;
 use App\Events\AttendanceRecorded;
+use App\Services\SolutionSoapService;
 
 class AbsensiController extends Controller
 {
+    /**
+     * Normalisasi parameter karyawan_id dari form Cetak Laporan.
+     * Menerima checkbox (karyawan_id[]), string comma-separated, maupun nilai kosong.
+     * Mengembalikan array ID integer; array kosong berarti "semua karyawan".
+     */
+    private function parseKaryawanIds($raw)
+    {
+        if ($raw === null || $raw === '') {
+            return [];
+        }
+
+        $values = is_array($raw) ? $raw : explode(',', (string) $raw);
+
+        return array_values(array_unique(array_filter(array_map('intval', $values))));
+    }
+
     /**
      * Halaman Dashboard Absensi
      * Menghitung rangkuman untuk grafik dan kartu di UI
@@ -97,7 +114,7 @@ class AbsensiController extends Controller
     /**
      * PERBAIKAN LOGIKA: Memproses Penarikan Data Log Mesin Berdasarkan Pengaturan Jam Kerja Dinamis (ANTI-DUPLIKASI)
      */
-    public function tarikDataDariMesin(\App\Services\SolutionX100CService $zktecoService)
+    public function tarikDataDariMesin(\App\Services\SolutionX100CService $zktecoService, SolutionSoapService $soapService)
     {
         // Cegah eksekusi paralel jika tombol diklik berkali-kali
         $lock = \Illuminate\Support\Facades\Cache::lock('sync-absensi', 10);
@@ -108,19 +125,18 @@ class AbsensiController extends Controller
         try {
             $startTime = microtime(true);
             $rawLogs = [];
-            $machines = \App\Models\MachineStatus::all();
+            $machines = \App\Models\MachineStatus::whereIn('machine_type', ['solution', 'x100c'])->get();
 
             // 1. Tarik log absensi dari seluruh perangkat yang terdaftar di database
             $connected = false;
             foreach ($machines as $m) {
-                $zktecoService->setConnection($m->machine_ip, $m->port);
-                $logs = $zktecoService->downloadLogTigaBulan();
+                $service = $this->serviceForMachine($m, $zktecoService, $soapService);
+                $logs = $service->downloadLogTigaBulan();
                 $rawLogs = array_merge($rawLogs, (array)$logs);
-                if (!empty($logs)) {
-                    $m->updateStatus(true);
+                $machineConnected = $service->wasLastConnectionSuccessful();
+                $m->updateStatus($machineConnected, $machineConnected ? round((microtime(true) - $startTime) * 1000) : null);
+                if ($machineConnected) {
                     $connected = true;
-                } else {
-                    $m->updateStatus(false);
                 }
             }
 
@@ -245,17 +261,12 @@ class AbsensiController extends Controller
 
         $mulai      = $request->tanggal_mulai;
         $selesai    = $request->tanggal_selesai;
-        
-        // Handle array from checkbox or string from legacy select
-        if (is_array($request->karyawan_id)) {
-            $karyawanIds = $request->karyawan_id;
-        } else {
-            $karyawanIds = $request->karyawan_id ? explode(',', $request->karyawan_id) : [];
-        }
+
+        $karyawanIds = $this->parseKaryawanIds($request->input('karyawan_id'));
 
         $query = Attendance::with('karyawan')->whereBetween('tanggal', [$mulai, $selesai]);
 
-        if (!empty($karyawanIds) && !in_array('semua', $karyawanIds)) {
+        if (!empty($karyawanIds)) {
             $query->whereIn('karyawan_id', $karyawanIds);
         }
 
@@ -344,17 +355,12 @@ class AbsensiController extends Controller
 
         $mulai      = $request->tanggal_mulai;
         $selesai    = $request->tanggal_selesai;
-        
-        // Handle array from checkbox or string from legacy select
-        if (is_array($request->karyawan_id)) {
-            $karyawanIds = $request->karyawan_id;
-        } else {
-            $karyawanIds = $request->karyawan_id ? explode(',', $request->karyawan_id) : [];
-        }
+
+        $karyawanIds = $this->parseKaryawanIds($request->input('karyawan_id'));
 
         $query = Attendance::with('karyawan')->whereBetween('tanggal', [$mulai, $selesai]);
 
-        if (!empty($karyawanIds) && !in_array('semua', $karyawanIds)) {
+        if (!empty($karyawanIds)) {
             $query->whereIn('karyawan_id', $karyawanIds);
         }
 
@@ -529,5 +535,21 @@ class AbsensiController extends Controller
         $lembur->delete();
 
         return back()->with('status', 'Data lembur berhasil dihapus!');
+    }
+
+    protected function serviceForMachine($machine, \App\Services\SolutionX100CService $binaryService, SolutionSoapService $soapService)
+    {
+        $transport = strtolower((string) env('SOLUTION_TRANSPORT', 'soap'));
+        if ($transport !== 'binary' && ($transport === 'soap' || (int) ($machine->port ?? 0) === 80)) {
+            $soapService->setConnection(
+                $machine->machine_ip,
+                (int) env('SOLUTION_SOAP_PORT', 80),
+                $machine->username
+            );
+            return $soapService;
+        }
+
+        $binaryService->setConnection($machine->machine_ip, $machine->port ?? 4370);
+        return $binaryService;
     }
 }

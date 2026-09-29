@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\DatabaseMaintenanceController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\CutiControlController;
 use App\Http\Controllers\MesinAbsensiController;
+use App\Http\Controllers\LaporanController;
 
 
 /*
@@ -45,6 +46,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/karyawan', [KaryawanController::class, 'index'])->name('karyawan.index');
         Route::get('admin/leaves', [LeaveController::class, 'index'])->name('admin.leaves.index');
         Route::delete('admin/leaves/{id}', [LeaveController::class, 'destroy'])->name('admin.leaves.destroy');
+        Route::get('laporan/kehadiran', [LaporanController::class, 'index'])->name('laporan.kehadiran');
+        Route::get('laporan/kehadiran/cetak', [LaporanController::class, 'cetak'])->name('laporan.kehadiran.cetak');
+        Route::get('laporan/kehadiran/excel', [LaporanController::class, 'exportExcel'])->name('laporan.kehadiran.excel');
+        Route::get('laporan/kehadiran/karyawan/{karyawan}', [LaporanController::class, 'detail'])->name('laporan.kehadiran.detail');
+        Route::get('laporan/kehadiran/karyawan/{karyawan}/cetak', [LaporanController::class, 'detailCetak'])->name('laporan.kehadiran.detail.cetak');
+        Route::get('laporan/kehadiran/karyawan/{karyawan}/excel', [LaporanController::class, 'detailExcel'])->name('laporan.kehadiran.detail.excel');
     });
 
     // 3. Rute Khusus Approver Murni & Superadmin

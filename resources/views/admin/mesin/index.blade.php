@@ -30,6 +30,16 @@
                 <li class="nav-item"><a class="nav-link" href="{{ url('/karyawan') }}"><i class="bi bi-people me-2"></i> Karyawan</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/absensi') }}"><i class="bi bi-calendar-check me-2"></i> Absensi</a></li>
                 @if(auth()->user()->isApprover())
+                <li class="nav-item mt-3">
+                    <small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">LAPORAN</small>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('laporan*') ? 'active' : '' }}" href="{{ url('/laporan/kehadiran') }}">
+                        <i class="bi bi-clipboard-data me-2"></i> Laporan Kehadiran
+                    </a>
+                </li>
+                @endif
+                @if(auth()->user()->isApprover())
                     <li class="nav-item mt-3"><small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small></li>
                     <li class="nav-item"><a class="nav-link" href="{{ route('admin.leaves.index') }}"><i class="bi bi-envelope-paper me-2"></i> Izin & Cuti</a></li>
                     @if(auth()->user()->isTrueApprover())
@@ -120,7 +130,7 @@
                                             <td class="small text-muted">{{ $m->getLastPingHuman() }}</td>
                                             <td class="small text-muted">{{ $m->getFormattedResponseTime() }}</td>
                                             <td class="text-end pe-3">
-                                                <button type="button" class="btn btn-sm btn-outline-warning border-0 me-1" title="Edit Perangkat" onclick="editDevice({{ $m->id }}, '{{ $m->machine_name }}', '{{ $m->machine_type }}', '{{ $m->machine_ip }}', '{{ $m->port }}', '{{ $m->username }}')"><i class="bi bi-pencil"></i></button>
+                                                <button type="button" class="btn btn-sm btn-outline-warning border-0 me-1" title="Edit Perangkat" onclick="editDevice({{ $m->id }})"><i class="bi bi-pencil"></i></button>
                                                 <form action="{{ route('admin.mesin.device.ping', $m->id) }}" method="POST" class="d-inline">
                                                     @csrf
                                                     <button type="submit" class="btn btn-sm btn-outline-success border-0 me-1" title="Ping Koneksi"><i class="bi bi-broadcast"></i></button>
@@ -153,11 +163,12 @@
                                 @csrf
                                 <div class="mb-3">
                                     <label class="form-label text-muted small fw-bold mb-1">1. Pilih Mesin Tujuan</label>
-                                    <select class="form-select bg-light border-0" name="mesin_tujuan" id="kirim_mesin_tujuan" required>
-                                        <option value="">-- Mesin Tujuan --</option>
-                                        
-                                        <option value="solution">Hanya Solution</option>
-                                    </select>
+                        <select class="form-select bg-light border-0" name="machine_id" id="kirim_mesin_tujuan" required>
+                                            <option value="">-- Mesin Tujuan --</option>
+                                            @foreach($machines as $machine)
+                                                <option value="{{ $machine->id }}">{{ $machine->machine_name }} ({{ $machine->machine_ip }}:{{ $machine->port }})</option>
+                                            @endforeach
+                                        </select>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label text-muted small fw-bold mb-1">2. Pilih Karyawan</label>
@@ -181,10 +192,11 @@
                             <form action="{{ route('admin.mesin.tarik') }}" method="POST" onsubmit="return confirm('Mulai tarik data dan daftarkan ke database lokal?')">
                                 @csrf
                                 <div class="mb-3">
-                                    <select class="form-select bg-light border-0" name="mesin_tujuan" required>
+                                    <select class="form-select bg-light border-0" name="machine_id" required>
                                         <option value="">-- Mesin Sumber --</option>
-                                        
-                                        <option value="solution">Hanya Solution</option>
+                                        @foreach($machines as $machine)
+                                            <option value="{{ $machine->id }}">{{ $machine->machine_name }} ({{ $machine->machine_ip }}:{{ $machine->port }})</option>
+                                        @endforeach
                                     </select>
                                 </div>
                                 <button type="submit" class="btn btn-outline-success w-100 fw-bold rounded-3">
@@ -205,11 +217,16 @@
                         </div>
                         <div class="card-body p-0">
                             <div>
-                                    <div class="d-flex justify-content-end p-3 bg-light border-bottom">
-                                        <form action="{{ route('admin.mesin.clean', 'solution') }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus SEMUA user di mesin Solution yang tidak terdaftar di database Web?');">
+                                    <div class="d-flex justify-content-end gap-2 p-3 bg-light border-bottom">
+                                        <form id="cleanMachineForm" action="{{ route('admin.mesin.clean', $machines->first()?->id ?? 'solution') }}" method="POST" class="d-flex gap-2" onsubmit="return confirm('Yakin ingin menghapus user yang tidak terdaftar di database Web dari mesin ini?');">
                                             @csrf
+                                            <select id="cleanMachine" class="form-select form-select-sm" required>
+                                                @foreach($machines as $machine)
+                                                    <option value="{{ $machine->id }}">{{ $machine->machine_name }}</option>
+                                                @endforeach
+                                            </select>
                                             <button type="submit" class="btn btn-sm btn-danger fw-semibold shadow-sm">
-                                                <i class="bi bi-stars me-1"></i> Bersihkan Data Asing (Auto-Hapus)
+                                                <i class="bi bi-stars me-1"></i> Bersihkan Data Asing
                                             </button>
                                         </form>
                                     </div>
@@ -244,7 +261,7 @@
                                                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
                                                                     @if($isLocal)
                                                                         <li>
-                                                                            <button type="button" class="dropdown-item" onclick="editKaryawan({{ $isLocal->id }}, '{{ $isLocal->nama }}', '{{ $isLocal->departemen }}', '{{ $isLocal->jabatan }}')">
+                                                                            <button type="button" class="dropdown-item" onclick="editKaryawan({{ $isLocal->id }})">
                                                                                 <i class="bi bi-pencil-square text-primary me-2"></i> Edit Data Web
                                                                             </button>
                                                                         </li>
@@ -259,7 +276,7 @@
                                                                         <li><hr class="dropdown-divider"></li>
                                                                     @endif
                                                                     <li>
-                                                                        <form action="{{ route('admin.mesin.hapus', ['mesin' => 'solution', 'pin' => $u['pin']]) }}" method="POST" onsubmit="return confirm('Hapus permanen PIN {{ $u['pin'] }} DARI MESIN FISIK SOLUTION?');">
+                                                                        <form action="{{ route('admin.mesin.hapus', ['mesin' => $u['machine_id'], 'pin' => $u['pin']]) }}" method="POST" onsubmit="return confirm('Hapus permanen PIN {{ $u['pin'] }} dari {{ $u['machine_name'] }}?');">
                                                                             @csrf @method('DELETE')
                                                                             <button type="submit" class="dropdown-item text-danger">
                                                                                 <i class="bi bi-trash-fill text-danger me-2"></i> Hapus dari Mesin
@@ -302,7 +319,7 @@
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label fw-semibold small text-muted">Vendor / Tipe Mesin</label>
-                        <select name="machine_type" class="form-select bg-light border-0" required><option value="solution">Solution / ZKTeco</option></select>
+                        <select name="machine_type" class="form-select bg-light border-0" required><option value="solution">Solution / X100C</option><option value="x100c">X100C</option></select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold small text-muted">Nama Perangkat (Bebas)</label>
@@ -315,7 +332,7 @@
                         </div>
                         <div class="col-4">
                             <label class="form-label fw-semibold small text-muted">Port</label>
-                            <input type="number" name="port" id="inputPort" class="form-control bg-light border-0" value="4370" required>
+                            <input type="number" name="port" id="inputPort" class="form-control bg-light border-0" value="4370" min="1" max="65535" required>
                         </div>
                     </div>
                     
@@ -349,7 +366,7 @@
                 <div class="modal-body p-4">
                     <div class="mb-3">
                         <label class="form-label fw-semibold small text-muted">Vendor / Tipe Mesin</label>
-                        <select name="machine_type" id="edit_machine_type" class="form-select bg-light border-0" required><option value="solution">Solution / ZKTeco</option></select>
+                        <select name="machine_type" id="edit_machine_type" class="form-select bg-light border-0" required><option value="solution">Solution / X100C</option><option value="x100c">X100C</option></select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold small text-muted">Nama Perangkat</label>
@@ -362,15 +379,17 @@
                         </div>
                         <div class="col-4">
                             <label class="form-label fw-semibold small text-muted">Port</label>
-                            <input type="number" name="port" id="edit_port" class="form-control bg-light border-0" required>
+                            <input type="number" name="port" id="edit_port" class="form-control bg-light border-0" min="1" max="65535" required>
                         </div>
                     </div>
-                    
-                    
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small text-muted">Password (Kosongkan jika tidak diubah)</label>
-                            <input type="password" name="password" id="edit_password" class="form-control bg-light border-0">
-                        </div>
+                     <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Username / Comm Key</label>
+                        <input type="text" name="username" id="edit_username" class="form-control bg-light border-0" value="{{ old('username') }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Password (Kosongkan jika tidak diubah)</label>
+                        <input type="password" name="password" id="edit_password" class="form-control bg-light border-0">
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
@@ -421,78 +440,74 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
-    function editKaryawan(id, nama, dept, jab) {
-        document.getElementById('editKaryawanForm').action = "{{ url('admin/mesin-absensi/karyawan') }}/" + id;
-        document.getElementById('edit_karyawan_nama').value = nama;
-        document.getElementById('edit_karyawan_departemen').value = (dept === '-' || dept === 'null' || !dept) ? '' : dept;
-        document.getElementById('edit_karyawan_jabatan').value = (jab === '-' || jab === 'null' || !jab) ? '' : jab;
-        
-        var modal = new bootstrap.Modal(document.getElementById('editKaryawanModal'));
-        modal.show();
+    const machineOptions = @json($machines->keyBy('id'));
+    const karyawanOptions = @json($karyawans->keyBy('id'));
+    const usersByMachine = @json($usersByMachine);
+
+    function editKaryawan(id) {
+        const karyawan = karyawanOptions[id];
+        if (!karyawan) return;
+
+        document.getElementById('editKaryawanForm').action = "{{ url('admin/mesin-absensi/karyawan') }}/" + encodeURIComponent(id);
+        document.getElementById('edit_karyawan_nama').value = karyawan.nama || '';
+        document.getElementById('edit_karyawan_departemen').value = karyawan.departemen && karyawan.departemen !== '-' ? karyawan.departemen : '';
+        document.getElementById('edit_karyawan_jabatan').value = karyawan.jabatan && karyawan.jabatan !== '-' ? karyawan.jabatan : '';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('editKaryawanModal')).show();
     }
 
-     
+    function editDevice(id) {
+        const machine = machineOptions[id];
+        if (!machine) return;
 
-     
-
-    function editDevice(id, name, type, ip, port, username) {
-        document.getElementById('editDeviceForm').action = "{{ url('admin/mesin-absensi/device') }}/" + id;
-        document.getElementById('edit_machine_name').value = name;
-        document.getElementById('edit_machine_type').value = type;
-        document.getElementById('edit_machine_ip').value = ip;
-        document.getElementById('edit_port').value = port;
-        document.getElementById('edit_username').value = username;
-        
-        
-        
-        var modal = new bootstrap.Modal(document.getElementById('editDeviceModal'));
-        modal.show();
+        document.getElementById('editDeviceForm').action = "{{ url('admin/mesin-absensi/device') }}/" + encodeURIComponent(id);
+        document.getElementById('edit_machine_name').value = machine.machine_name || '';
+        document.getElementById('edit_machine_type').value = machine.machine_type || 'solution';
+        document.getElementById('edit_machine_ip').value = machine.machine_ip || '';
+        document.getElementById('edit_port').value = machine.port || 4370;
+        document.getElementById('edit_username').value = '';
+        document.getElementById('edit_password').value = '';
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('editDeviceModal')).show();
     }
-
-    // Data sinkronisasi untuk fitur Kirim Data Pintar
-    const localKaryawans = @json($karyawans);
-    
-    const usersSol = @json(array_column((array)$usersSol, 'pin'));
 
     const selectMesinKirim = document.getElementById('kirim_mesin_tujuan');
     const selectKaryawanKirim = document.getElementById('kirim_karyawan_id');
 
     selectMesinKirim.addEventListener('change', function() {
-        const mesin = this.value;
+        const machineId = this.value;
+        const registeredPins = usersByMachine[machineId] || [];
         selectKaryawanKirim.innerHTML = '<option value="">-- Pilih Karyawan --</option>';
-        
-        if(!mesin) {
+
+        if (!machineId) {
             selectKaryawanKirim.disabled = true;
-            selectKaryawanKirim.innerHTML = '<option value="">-- Pilih Mesin Terlebih Dahulu --</option>';
+            selectKaryawanKirim.innerHTML = '<option value="">-- Pilih Mesin terlebih Dahulu --</option>';
             return;
         }
 
         selectKaryawanKirim.disabled = false;
         let countUnsynced = 0;
 
-        localKaryawans.forEach(k => {
-            let isRegistered = false;
-            let pinStr = String(k.id_karyawan);
-            
-            if(mesin === 'solution') {
-                isRegistered = usersSol.includes(pinStr);
-            }
-
-            if(!isRegistered) {
-                let option = document.createElement('option');
-                option.value = k.id;
-                option.text = k.id_karyawan + ' - ' + k.nama;
+        Object.values(karyawanOptions).forEach(karyawan => {
+            if (!registeredPins.includes(String(karyawan.id_karyawan))) {
+                const option = document.createElement('option');
+                option.value = karyawan.id;
+                option.text = karyawan.id_karyawan + ' - ' + karyawan.nama;
                 selectKaryawanKirim.appendChild(option);
                 countUnsynced++;
             }
         });
 
-        if(countUnsynced === 0) {
+        if (countUnsynced === 0) {
             selectKaryawanKirim.innerHTML = '<option value="">-- Semua Karyawan Sudah Sinkron --</option>';
             selectKaryawanKirim.disabled = true;
         }
     });
 
-    </script>
+    const cleanMachine = document.getElementById('cleanMachine');
+    if (cleanMachine) {
+        cleanMachine.addEventListener('change', function() {
+            document.getElementById('cleanMachineForm').action = "{{ url('admin/mesin-absensi/clean') }}/" + encodeURIComponent(this.value);
+        });
+    }
+</script>
 </body>
 </html>

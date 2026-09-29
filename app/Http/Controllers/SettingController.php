@@ -18,23 +18,25 @@ class SettingController extends Controller
     public function update(Request $request)
     {
         $request->validate([
-            'jam_masuk' => 'required',
-            'jam_pulang' => 'required',
-            'toleransi_terlambat' => 'required|numeric|min:0',
-            'auto_pull_interval' => 'required|numeric|min:1',
+            'jam_masuk' => 'required|date_format:H:i',
+            'jam_pulang' => 'required|date_format:H:i',
+            'toleransi_terlambat' => 'required|integer|min:0|max:1440',
+            'auto_pull_interval' => 'required|integer|min:1|max:24',
             'jam_lembur_mulai' => 'required|date_format:H:i',
-            'required_approvals' => 'required|numeric|min:1',
+            'required_approvals' => 'required|integer|min:1|max:10',
         ]);
 
         // Get old values for audit
         $oldSettings = DB::table('settings')->pluck('value', 'key')->toArray();
 
-        DB::table('settings')->updateOrInsert(['key' => 'jam_masuk'], ['value' => $request->jam_masuk, 'updated_at' => now()]);
-        DB::table('settings')->updateOrInsert(['key' => 'jam_pulang'], ['value' => $request->jam_pulang, 'updated_at' => now()]);
-        DB::table('settings')->updateOrInsert(['key' => 'toleransi_terlambat'], ['value' => $request->toleransi_terlambat, 'updated_at' => now()]);
-        DB::table('settings')->updateOrInsert(['key' => 'auto_pull_interval'], ['value' => $request->auto_pull_interval, 'updated_at' => now()]);
-        DB::table('settings')->updateOrInsert(['key' => 'jam_lembur_mulai'], ['value' => $request->jam_lembur_mulai, 'updated_at' => now()]);
-        DB::table('settings')->updateOrInsert(['key' => 'required_approvals'], ['value' => $request->required_approvals, 'updated_at' => now()]);
+        DB::transaction(function () use ($request) {
+            DB::table('settings')->updateOrInsert(['key' => 'jam_masuk'], ['value' => $request->jam_masuk, 'updated_at' => now()]);
+            DB::table('settings')->updateOrInsert(['key' => 'jam_pulang'], ['value' => $request->jam_pulang, 'updated_at' => now()]);
+            DB::table('settings')->updateOrInsert(['key' => 'toleransi_terlambat'], ['value' => $request->toleransi_terlambat, 'updated_at' => now()]);
+            DB::table('settings')->updateOrInsert(['key' => 'auto_pull_interval'], ['value' => $request->auto_pull_interval, 'updated_at' => now()]);
+            DB::table('settings')->updateOrInsert(['key' => 'jam_lembur_mulai'], ['value' => $request->jam_lembur_mulai, 'updated_at' => now()]);
+            DB::table('settings')->updateOrInsert(['key' => 'required_approvals'], ['value' => $request->required_approvals, 'updated_at' => now()]);
+        });
 
         // Log audit
         AuditLogger::settingsUpdated($oldSettings, [

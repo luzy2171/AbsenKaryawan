@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('machine_status', function (Blueprint $table) {
-            $table->string('machine_type')->default('hikvision')->after('machine_name');
-            $table->integer('port')->default(80)->after('machine_type');
+            $table->string('machine_type')->default('solution')->after('machine_name');
+            $table->integer('port')->default(4370)->after('machine_type');
             $table->string('username')->nullable()->after('port');
             $table->string('password')->nullable()->after('username');
         });

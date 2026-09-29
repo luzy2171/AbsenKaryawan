@@ -32,13 +32,11 @@
         <div class="text-end">
             <h5 class="fw-bold mb-0">LAPORAN DETAIL ABSENSI KARYAWAN</h5>
             <small class="text-secondary">Periode: <strong>{{ date('d/m/Y', strtotime($mulai)) }}</strong> s.d <strong>{{ date('d/m/Y', strtotime($selesai)) }}</strong></small>
-            @if(isset($karyawanIds) && in_array('semua', $karyawanIds))
-                <br><small class="text-success fw-semibold">Semua Karyawan</small>
-            @elseif(isset($karyawanIds) && count($karyawanIds) > 0)
+            @if(!empty($karyawanIds))
                 @php
-                    $namaKaryawan = \App\Models\Karyawan::whereIn('id', $karyawanIds)->pluck('nama')->toArray();
+                    $namaKaryawan = \App\Models\Karyawan::whereIn('id', $karyawanIds)->orderBy('nama')->pluck('nama')->toArray();
                 @endphp
-                <br><small class="text-success fw-semibold">{{ implode(', ', $namaKaryawan) }}</small>
+                <br><small class="text-success fw-semibold">{{ count($namaKaryawan) }} karyawan: {{ implode(', ', $namaKaryawan) }}</small>
             @else
                 <br><small class="text-success fw-semibold">Semua Karyawan</small>
             @endif

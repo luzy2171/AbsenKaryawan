@@ -25,6 +25,16 @@
                 <li class="nav-item"><a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ url('/dashboard') }}"><i class="bi bi-grid me-2"></i> Dashboard</a></li>
                 <li class="nav-item"><a class="nav-link {{ request()->is('karyawan*') ? 'active' : '' }}" href="{{ url('/karyawan') }}"><i class="bi bi-people me-2"></i> Karyawan</a></li>
                 <li class="nav-item"><a class="nav-link {{ request()->is('absensi*') ? 'active' : '' }}" href="{{ url('/absensi') }}"><i class="bi bi-calendar-check me-2"></i> Absensi</a></li>
+                @if(auth()->user()->isApprover())
+                <li class="nav-item mt-3">
+                    <small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">LAPORAN</small>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('laporan*') ? 'active' : '' }}" href="{{ url('/laporan/kehadiran') }}">
+                        <i class="bi bi-clipboard-data me-2"></i> Laporan Kehadiran
+                    </a>
+                </li>
+                @endif
                 @if(auth()->user()->isSuperadmin())
                 <li class="nav-item mt-3"><small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small></li>
                                 <li class="nav-item">
@@ -67,7 +77,7 @@
                     <div class="d-flex align-items-center"><i class="bi bi-cpu text-muted me-2"></i><small class="text-muted">Kendali SDK dan manajemen perangkat keras</small></div>
                 </div>
                 <div class="d-flex align-items-center">
-                    <div class="text-end me-3"><p class="mb-0 fw-semibold small">{{ auth()->user()->name }}</p><small class="text-muted">Superadmin</small></div>
+                    <div class="text-end me-3"><p class="mb-0 fw-semibold small">{{ auth()->user()->name }}</p><small class="text-muted">{{ ucfirst(auth()->user()->role) }}</small></div>
                     <div class="avatar-circle text-success">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
                 </div>
             </div>
@@ -112,7 +122,7 @@
                         <h6 class="fw-bold mb-3"><i class="bi bi-toggles text-primary me-2"></i>Konsol Kendali</h6>
                         <div class="row g-2">
                             <div class="col-12">
-                                <a href="{{ route('pengaturan.index', ['view_users' => 1]) }}" class="btn btn-outline-primary w-100 text-start"><i class="bi bi-cloud-download me-2"></i>Tarik Data Log</a>
+                                <a href="{{ route('pengaturan.index', ['view_users' => 1]) }}" class="btn btn-outline-primary w-100 text-start"><i class="bi bi-cloud-download me-2"></i>Tarik Data User</a>
                             </div>
                             <div class="col-6">
                                 <form action="{{ route('pengaturan.sync-time') }}" method="POST">@csrf<button type="submit" class="btn btn-outline-success w-100 text-start"><i class="bi bi-clock-history me-2"></i>Sync Waktu</button></form>
@@ -130,6 +140,7 @@
                             @csrf
                             <div class="mb-2"><input type="text" name="machine_name" class="form-control form-control-sm" placeholder="Nama Perangkat" required></div>
                             <div class="mb-2"><input type="text" name="machine_ip" class="form-control form-control-sm" placeholder="IP Address" required></div>
+                            <div class="mb-2"><input type="hidden" name="machine_type" value="solution"><input type="number" name="port" class="form-control form-control-sm" value="4370" min="1" max="65535" required></div>
                             <button type="submit" class="btn btn-success w-100"><i class="bi bi-plus-lg me-1"></i>Tambah Perangkat</button>
                         </form>
                     </div>
@@ -143,6 +154,7 @@
                     <table class="table table-hover align-middle">
                         <thead><tr class="border-bottom">
                             <th class="fw-bold text-muted small">NAMA PERANGKAT</th>
+                            <th class="fw-bold text-muted small">TIPE / PORT</th>
                             <th class="fw-bold text-muted small">IP ADDRESS</th>
                             <th class="fw-bold text-muted small">STATUS</th>
                             <th class="fw-bold text-muted small">LAST PING</th>
@@ -158,6 +170,7 @@
                                         <div><span class="fw-bold small">{{ $machine->machine_name }}</span>@if($machine->isDefault())<span class="badge bg-primary-subtle text-primary ms-1">Default</span>@endif</div>
                                     </div>
                                 </td>
+                                <td><span class="badge bg-primary-subtle text-primary">{{ $solutionTransport === 'binary' ? 'Solution X100C TCP' : 'Solution SOAP SDK' }}</span><br><small class="text-muted">Port {{ $solutionTransport === 'binary' ? ($machine->port ?? 4370) : $solutionSoapPort }}</small></td>
                                 <td><code class="small">{{ $machine->machine_ip }}</code></td>
                                 <td><span class="badge {{ $machine->getStatusBadgeClass() }}"><span class="status-indicator bg-{{ $machine->isOnline() ? 'success' : 'danger' }} me-1" style="font-size: 6px;"></span>{{ $machine->getStatusLabel() }}</span></td>
                                 <td class="small text-muted">{{ $machine->getLastPingHuman() }}</td>
@@ -172,7 +185,7 @@
                                 </td>
                             </tr>
                             @empty
-                            <tr><td colspan="6" class="text-center py-4"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2 text-danger opacity-50"></i><p class="text-muted mb-0">Belum ada perangkat terdaftar</p></td></tr>
+                                <tr><td colspan="7" class="text-center py-4"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2 text-danger opacity-50"></i><p class="text-muted mb-0">Belum ada perangkat terdaftar</p></td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -203,7 +216,7 @@
                                     <thead><tr class="border-bottom">
                                         <th class="fw-bold text-muted small">USER ID</th>
                                         <th class="fw-bold text-muted small">NAMA</th>
-                                        <th class="fw-bold text-muted small">PIN</th>
+                                        <th class="fw-bold text-muted small">HAK AKSES</th>
                                         <th class="fw-bold text-muted small">AKSI</th>
                                     </tr></thead>
                                     <tbody>
@@ -212,13 +225,14 @@
                                             <td><code class="small">{{ is_array($user) ? ($user['pin'] ?? '-') : ($user->pin ?? '-') }}</code></td>
                                             <td class="fw-semibold small">{{ is_array($user) ? ($user['name'] ?? '-') : ($user->name ?? '-') }}</td>
                                             <td>
-                                                <span class="badge {{ (is_array($user) ? ($user['privilege'] ?? '0') : ($user->privilege ?? '0')) == '14' ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success' }}">
-                                                    {{ (is_array($user) ? ($user['privilege'] ?? '0') : ($user->privilege ?? '0')) == '14' ? 'ADMIN' : 'USER' }}
+                                                <span class="badge {{ (is_array($user) ? ($user['privilege'] ?? '0') : ($user->privilege ?? '0')) === 'Super Admin' ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success' }}">
+                                                    {{ (is_array($user) ? ($user['privilege'] ?? '0') : ($user->privilege ?? '0')) === 'Super Admin' ? 'SUPER ADMIN' : 'USER' }}
                                                 </span>
                                             </td>
                                             <td>
                                                 <form action="{{ route('pengaturan.hapus-user') }}" method="POST" onsubmit="return confirm('Yakin hapus PIN/User ini dari mesin?');">
                                                     @csrf
+                                                    <input type="hidden" name="machine_id" value="{{ $currentMachine?->id }}">
                                                     <input type="hidden" name="user_id" value="{{ is_array($user) ? ($user['pin'] ?? '') : ($user->pin ?? '') }}">
                                                     <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i> Hapus</button>
                                                 </form>
@@ -238,7 +252,7 @@
                             <div class="text-center py-5"><i class="bi bi-exclamation-triangle fs-1 d-block mb-3 text-warning opacity-50"></i><p class="text-muted">Data karyawan dari mesin belum tersedia. Pastikan mesin menyala dan coba lagi.</p></div>
                             @endif
                         @else
-                            <div class="text-center py-5"><i class="bi bi-people fs-1 d-block mb-3 text-secondary opacity-50"></i><p class="text-muted">Tekan "Tarik Data Log" untuk melihat data karyawan dari mesin</p></div>
+                            <div class="text-center py-5"><i class="bi bi-people fs-1 d-block mb-3 text-secondary opacity-50"></i><p class="text-muted">Tekan "Tarik Data User" untuk melihat data karyawan dari mesin</p></div>
                         @endif
                     </div>
                     <div class="tab-pane fade @if(request()->has('view_logs')) show active @endif" id="tab-log" role="tabpanel">
@@ -247,8 +261,7 @@
                             <div class="table-responsive">
                                 <table class="table table-hover align-middle">
                                     <thead><tr class="border-bottom">
-                                        <th class="fw-bold text-muted small">TANGGAL</th>
-                                        <th class="fw-bold text-muted small">WAKTU (DATETIME)</th>
+                                        <th class="fw-bold text-muted small">DATETIME</th>
                                         <th class="fw-bold text-muted small">NAMA</th>
                                         <th class="fw-bold text-muted small">PIN</th>
                                         <th class="fw-bold text-muted small">VERIFY</th>

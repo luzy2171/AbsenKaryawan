@@ -45,6 +45,16 @@
                 </li>
                 @if(auth()->user()->isApprover())
                 <li class="nav-item mt-3">
+                    <small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">LAPORAN</small>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('laporan*') ? 'active' : '' }}" href="{{ url('/laporan/kehadiran') }}">
+                        <i class="bi bi-clipboard-data me-2"></i> Laporan Kehadiran
+                    </a>
+                </li>
+                @endif
+                @if(auth()->user()->isApprover())
+                <li class="nav-item mt-3">
                     <small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small>
                 </li>
                                 <li class="nav-item">
@@ -224,32 +234,36 @@
                         <label class="form-label fw-semibold small">
                             <i class="bi bi-person-badge text-muted me-1"></i>Karyawan
                         </label>
-                        <input type="hidden" name="karyawan_id" id="karyawanIdsInput" value="">
-                        <div id="selectedKaryawanTags" class="mt-1 d-flex flex-wrap gap-1"></div>
                         <div class="dropdown w-100">
                             <button class="btn btn-outline-secondary w-100 text-start dropdown-toggle" type="button" id="karyawanDropdown" data-bs-toggle="dropdown" aria-expanded="false" data-bs-auto-close="outside">
-                                <span id="karyawanDropdownLabel">Pilih Karyawan</span>
+                                <span id="karyawanDropdownLabel">Semua Karyawan</span>
                             </button>
-                            <div class="dropdown-menu w-100 p-2 shadow" style="max-height: 300px; overflow-y: auto;" aria-labelledby="karyawanDropdown">
+                            <div class="dropdown-menu w-100 p-2 shadow" style="max-height: 320px; overflow-y: auto;" aria-labelledby="karyawanDropdown">
+                                <input type="search" class="form-control form-control-sm mb-2" id="karyawanSearch" placeholder="Cari nama atau PIN..." autocomplete="off">
                                 <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" id="checkAllKaryawan" value="semua" onchange="toggleSemua(this)">
+                                    <input class="form-check-input" type="checkbox" id="checkAllKaryawan" onchange="toggleSemua(this)">
                                     <label class="form-check-label fw-semibold cursor-pointer w-100" for="checkAllKaryawan">
                                         <i class="bi bi-check-all me-1"></i>Semua Karyawan
                                     </label>
                                 </div>
                                 <hr class="dropdown-divider">
-                                <div class="d-flex flex-column gap-1">
-                                    @foreach($karyawans as $k)
-                                        <div class="form-check py-1 hover-bg-light rounded px-2 m-0 d-flex align-items-center" style="padding-left: 0.5rem !important;">
-                                            <input class="form-check-input karyawan-check m-0 me-2" type="checkbox" name="karyawan_id[]" value="{{ $k->id }}" id="karyawan_{{ $k->id }}" data-id="{{ $k->id }}" data-nama="{{ $k->nama }}" data-kode="{{ $k->id_karyawan }}" onchange="updateKaryawanDropdown()">
+                                <div class="d-flex flex-column gap-1" id="karyawanList">
+                                    @forelse($karyawans as $k)
+                                        <div class="form-check py-1 hover-bg-light rounded px-2 m-0 d-flex align-items-center karyawan-item" style="padding-left: 0.5rem !important;" data-search="{{ strtolower($k->nama . ' ' . $k->id_karyawan) }}">
+                                            <input class="form-check-input karyawan-check m-0 me-2" type="checkbox" name="karyawan_id[]" value="{{ $k->id }}" id="karyawan_{{ $k->id }}" onchange="updateKaryawanDropdown()">
                                             <label class="form-check-label cursor-pointer w-100 m-0 p-0 text-truncate" for="karyawan_{{ $k->id }}" style="line-height: 1.2;">
                                                 {{ $k->nama }} <span class="text-muted small ms-1">({{ $k->id_karyawan }})</span>
                                             </label>
                                         </div>
-                                    @endforeach
+                                    @empty
+                                        <div class="text-muted small px-2 py-2 text-center">Belum ada data karyawan.</div>
+                                    @endforelse
                                 </div>
+                                <div class="text-muted small text-center px-2 py-2 d-none" id="karyawanEmptyState">Nama tidak ditemukan.</div>
                             </div>
                         </div>
+                        <div id="selectedKaryawanTags" class="mt-1 d-flex flex-wrap gap-1"></div>
+                        <small class="text-muted d-block mt-1">Biarkan kosong untuk mencetak seluruh karyawan.</small>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label fw-semibold small">
@@ -381,6 +395,72 @@
         form.target = target;
         form.submit();
     }
+
+    function getKaryawanChecks() {
+        return Array.from(document.querySelectorAll('.karyawan-check'));
+    }
+
+    function updateKaryawanDropdown() {
+        const checks = getKaryawanChecks();
+        const total = checks.length;
+        const selected = checks.filter(c => c.checked);
+        const checkAll = document.getElementById('checkAllKaryawan');
+        const label = document.getElementById('karyawanDropdownLabel');
+        const tags = document.getElementById('selectedKaryawanTags');
+
+        if (checkAll) {
+            checkAll.checked = total > 0 && selected.length === total;
+            checkAll.indeterminate = selected.length > 0 && selected.length < total;
+        }
+
+        if (label) {
+            if (selected.length === 0) {
+                label.textContent = 'Semua Karyawan';
+            } else if (selected.length === total) {
+                label.textContent = 'Semua Karyawan (' + total + ')';
+            } else {
+                label.textContent = 'Terpilih ' + selected.length + ' karyawan';
+            }
+        }
+
+        if (tags) {
+            tags.innerHTML = '';
+            selected.forEach(c => {
+                const labelEl = document.querySelector('label[for="' + c.id + '"]');
+                const nama = labelEl ? labelEl.textContent.trim() : c.value;
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-success-subtle text-success border border-success-subtle';
+                badge.textContent = nama;
+                tags.appendChild(badge);
+            });
+        }
+    }
+
+    function toggleSemua(checkbox) {
+        const wasCheckedAll = checkbox.checked;
+        getKaryawanChecks().forEach(c => {
+            c.checked = wasCheckedAll;
+        });
+        updateKaryawanDropdown();
+    }
+
+    function filterKaryawan() {
+        const keyword = document.getElementById('karyawanSearch').value.trim().toLowerCase();
+        let visible = 0;
+        document.querySelectorAll('.karyawan-item').forEach(item => {
+            const cocok = keyword === '' || item.dataset.search.includes(keyword);
+            item.classList.toggle('d-none', !cocok);
+            if (cocok) visible++;
+        });
+        document.getElementById('karyawanEmptyState').classList.toggle('d-none', visible > 0);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        if (document.getElementById('karyawanSearch')) {
+            document.getElementById('karyawanSearch').addEventListener('input', filterKaryawan);
+        }
+        updateKaryawanDropdown();
+    });
 </script>
 
 

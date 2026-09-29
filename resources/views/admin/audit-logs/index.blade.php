@@ -45,6 +45,16 @@
                 </li>
                 @if(auth()->user()->isApprover())
                 <li class="nav-item mt-3">
+                    <small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">LAPORAN</small>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('laporan*') ? 'active' : '' }}" href="{{ url('/laporan/kehadiran') }}">
+                        <i class="bi bi-clipboard-data me-2"></i> Laporan Kehadiran
+                    </a>
+                </li>
+                @endif
+                @if(auth()->user()->isApprover())
+                <li class="nav-item mt-3">
                     <small class="text-muted px-3 fw-semibold" style="font-size: 11px; letter-spacing: 0.5px;">PENGATURAN</small>
                 </li>
                                 <li class="nav-item">
@@ -238,6 +248,10 @@
                                 <td class="small text-muted">
                                     <i class="bi bi-calendar3 me-1"></i>
                                     {{ $log->created_at->format('d/m/Y H:i:s') }}
+                                    <a href="{{ route('admin.audit-logs.show', $log->id) }}"
+                                       class="ms-2 text-decoration-none" title="Lihat detail">
+                                        <i class="bi bi-box-arrow-up-right"></i>
+                                    </a>
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center">

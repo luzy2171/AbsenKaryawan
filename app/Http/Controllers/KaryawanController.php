@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Karyawan;
+use App\Models\MachineStatus;
 use App\Helpers\AuditLogger;
+use App\Services\SolutionSoapService;
 
 class KaryawanController extends Controller
 {
@@ -26,7 +28,7 @@ class KaryawanController extends Controller
             abort(403, 'Akses ditolak. Role Anda tidak dapat menambah karyawan.');
         }
         $request->validate([
-            'id_karyawan' => 'required|unique:karyawans,id_karyawan',
+            'id_karyawan' => ['required', 'regex:/^\d{1,5}$/', 'unique:karyawans,id_karyawan'],
             'nama'        => 'required|string|max:255',
             'departemen'  => 'nullable|string',
             'jabatan'     => 'nullable|string',
@@ -50,41 +52,43 @@ class KaryawanController extends Controller
     /**
      * FITUR BARU: Sinkronisasi Otomatis Semua User dari Perangkat ke Database Web
      */
-    public function syncDariMesin(\App\Services\SolutionX100CService $zktecoService)
+    public function syncDariMesin(Request $request, \App\Services\SolutionX100CService $zktecoService, SolutionSoapService $soapService)
     {
-        // Track waktu mulai untuk response time
-        $startTime = microtime(true);
-        
-        // 1. Ambil seluruh data user yang ada di memori mesin
-        $zkUsers = $zktecoService->getAllUsers();
+        $request->validate([
+            'mesin_tujuan' => 'nullable|in:solution,x100c',
+        ]);
 
-        // Data user dari mesin (ZKTeco only)
+        $startTime = microtime(true);
+        $machine = MachineStatus::defaultForType('solution');
+
+        if (!$machine) {
+            return back()->with('error', 'Tidak ada mesin Solution yang dikonfigurasi.');
+        }
+
+        $service = $this->serviceForMachine($machine, $zktecoService, $soapService);
+        $zkUsers = $service->getAllUsers();
+        $connected = $service->wasLastConnectionSuccessful();
+
         $usersDariMesin = [];
         $uniquePins = [];
 
-        foreach ((array)$zkUsers as $user) {
-            if (!in_array($user['pin'], $uniquePins)) {
-                $uniquePins[] = $user['pin'];
-                $usersDariMesin[] = $user;
+        foreach ((array) $zkUsers as $user) {
+            if (!isset($user['pin']) || $user['pin'] === '' || in_array($user['pin'], $uniquePins, true)) {
+                continue;
             }
+
+            $uniquePins[] = $user['pin'];
+            $usersDariMesin[] = $user;
         }
 
-        // Update status mesin berdasarkan hasil koneksi
-        $machineStatus = \App\Models\MachineStatus::first();
-
         if (empty($usersDariMesin)) {
-            // Update status mesin menjadi offline
-            if ($machineStatus) {
-                $machineStatus->updateStatus(false);
-            }
+            $machine->updateStatus($connected, $connected ? round((microtime(true) - $startTime) * 1000) : null);
             return back()->with('error', 'Gagal mengambil data dari mesin. Pastikan mesin dalam kondisi terhubung (Online).');
         }
 
         // Hitung response time dan update status mesin menjadi online
         $responseTime = round((microtime(true) - $startTime) * 1000);
-        if ($machineStatus) {
-            $machineStatus->updateStatus(true, $responseTime);
-        }
+        $machine->updateStatus(true, $responseTime);
 
         $karyawanBaru = 0;
 
@@ -113,6 +117,22 @@ class KaryawanController extends Controller
     /**
      * Menghapus karyawan dari Web
      */
+    protected function serviceForMachine($machine, \App\Services\SolutionX100CService $binaryService, SolutionSoapService $soapService)
+    {
+        $transport = strtolower((string) env('SOLUTION_TRANSPORT', 'soap'));
+        if ($transport !== 'binary' && ($transport === 'soap' || (int) ($machine->port ?? 0) === 80)) {
+            $soapService->setConnection(
+                $machine->machine_ip,
+                (int) env('SOLUTION_SOAP_PORT', 80),
+                $machine->username
+            );
+            return $soapService;
+        }
+
+        $binaryService->setConnection($machine->machine_ip, $machine->port ?? 4370);
+        return $binaryService;
+    }
+
     public function destroy($id)
     {
         if (!auth()->user()->isTrueApprover()) {

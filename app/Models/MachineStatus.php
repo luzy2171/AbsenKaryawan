@@ -28,6 +28,11 @@ class MachineStatus extends Model
         'is_default',
     ];
 
+    protected $hidden = [
+        'username',
+        'password',
+    ];
+
     protected $casts = [
         'last_ping' => 'datetime',
         'is_default' => 'boolean',
@@ -104,6 +109,21 @@ class MachineStatus extends Model
     public function scopeDefault($query)
     {
         return $query->where('is_default', true);
+    }
+
+    public function scopeSolution($query)
+    {
+        return $query->whereIn('machine_type', ['solution', 'x100c']);
+    }
+
+    public static function defaultForType(?string $type = null)
+    {
+        $query = static::query();
+        if ($type !== null) {
+            $query->whereIn('machine_type', $type === 'x100c' ? ['x100c', 'solution'] : [$type]);
+        }
+
+        return $query->orderByDesc('is_default')->orderBy('id')->first();
     }
 
     /**
