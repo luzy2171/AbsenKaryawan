@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laporan_Absensi_{{ $mulai }}_sd_{{ $selesai }}</title>
-    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    @include('partials.favicon')
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <style>
@@ -22,26 +22,21 @@
 </head>
 <body onload="window.print()">
 
-<div class="container mt-4">
+<div class="container mt-4" style="position: relative;">
+    @include('partials.watermark')
+    <div style="position: relative; z-index: 1;">
+
     <!-- Header Dokumen Laporan -->
-    <div class="d-flex justify-content-between align-items-center border-bottom pb-3 mb-4">
-        <div>
-            <h3 class="fw-bold text-success mb-0">PT.BEJO BERKAH MAKMUR </h3>
-            <p class="text-muted small mb-0">Sistem Informasi Manajemen Absensi</p>
-        </div>
-        <div class="text-end">
-            <h5 class="fw-bold mb-0">LAPORAN DETAIL ABSENSI KARYAWAN</h5>
-            <small class="text-secondary">Periode: <strong>{{ date('d/m/Y', strtotime($mulai)) }}</strong> s.d <strong>{{ date('d/m/Y', strtotime($selesai)) }}</strong></small>
-            @if(!empty($karyawanIds))
-                @php
-                    $namaKaryawan = \App\Models\Karyawan::whereIn('id', $karyawanIds)->orderBy('nama')->pluck('nama')->toArray();
-                @endphp
-                <br><small class="text-success fw-semibold">{{ count($namaKaryawan) }} karyawan: {{ implode(', ', $namaKaryawan) }}</small>
-            @else
-                <br><small class="text-success fw-semibold">Semua Karyawan</small>
-            @endif
-        </div>
-    </div>
+    @include('partials.kop', [
+        'kopJudul' => 'LAPORAN DETAIL ABSENSI KARYAWAN',
+        'kopKanan' => array_filter([
+            'Periode: <strong>' . date('d/m/Y', strtotime($mulai)) . '</strong> s.d <strong>' . date('d/m/Y', strtotime($selesai)) . '</strong>',
+            empty($karyawanIds)
+                ? 'Semua Karyawan'
+                : count($karyawanIds) . ' karyawan: ' . implode(', ', \App\Models\Karyawan::whereIn('id', $karyawanIds)->orderBy('nama')->pluck('nama')->toArray()),
+            'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i') . ' WIB',
+        ]),
+    ])
 
     <!-- Tombol Khusus Layar -->
     <div class="no-print mb-3 text-end">
@@ -97,6 +92,7 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
     </div>
 </div>
 

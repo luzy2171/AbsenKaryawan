@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
+use App\Events\MachineStatusChanged;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
-use App\Events\MachineStatusChanged;
 
 class MachineStatus extends Model
 {
@@ -76,7 +76,7 @@ class MachineStatus extends Model
     {
         $oldStatus = $this->status;
         $newStatus = $isOnline ? 'online' : 'offline';
-        
+
         $this->update([
             'status' => $newStatus,
             'last_ping' => now(),
@@ -147,10 +147,10 @@ class MachineStatus extends Model
      */
     public function getLastPingHuman(): string
     {
-        if (!$this->last_ping) {
+        if (! $this->last_ping) {
             return 'Belum pernah';
         }
-        
+
         return $this->last_ping->diffForHumans();
     }
 
@@ -159,10 +159,10 @@ class MachineStatus extends Model
      */
     public function needsCheck(): bool
     {
-        if (!$this->last_ping) {
+        if (! $this->last_ping) {
             return true;
         }
-        
+
         return $this->last_ping->diffInMinutes(now()) >= 5;
     }
 

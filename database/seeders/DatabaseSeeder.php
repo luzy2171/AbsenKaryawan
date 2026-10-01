@@ -15,11 +15,11 @@ class DatabaseSeeder extends Seeder
     {
         // Membuat akun Superadmin default
         User::create([
-            'name'     => 'Super Admin',
+            'name' => 'Super Admin',
             'username' => 'superadmin',
-            'email'    => 'superadmin@example.com',
+            'email' => 'superadmin@example.com',
             'password' => Hash::make('superadmin123'),
-            'role'     => 'superadmin',
+            'role' => 'superadmin',
         ]);
     }
 }

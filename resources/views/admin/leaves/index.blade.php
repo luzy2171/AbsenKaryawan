@@ -4,30 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manajemen Izin & Cuti - Absensi-BBM</title>
-    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    @include('partials.favicon')
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ asset('css/custom.css') }}">
+    <link rel="stylesheet" href="{{ \App\Helpers\Asset::url('css/custom.css') }}">
 </head>
 <body>
 
 <div class="container-fluid">
     <div class="row">
         <!-- SIDEBAR -->
-        <div class="col-md-2 sidebar p-3 d-none d-md-block">
-            <div class="d-flex align-items-center mb-4 px-2 py-3">
-                <div class="stat-icon bg-success text-white me-2">
-                    <i class="bi bi-fingerprint"></i>
-                </div>
-                <div>
-                    <h5 class="fw-bold m-0 text-success" style="font-size: 18px;">Absensi-BBM</h5>
-                    <small class="text-muted" style="font-size: 10px;">Attendance System</small>
-                </div>
-            </div>
+        <div class="col-md-2 sidebar p-3">
+            @include('partials.brand')
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ url('/dashboard') }}">
@@ -71,10 +63,22 @@
                     </a>
                 </li>
                 @endif
+                @if(auth()->user()->isTrueApprover())
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('admin/tanda-tangan*') ? 'active' : '' }}" href="{{ route('signature.edit') }}">
+                        <i class="bi bi-pen me-2"></i> Tanda Tangan
+                    </a>
+                </li>
+                @endif
                 @if(auth()->user()->isSuperadmin())
                 <li class="nav-item">
                     <a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}" href="{{ url('/admin/settings') }}">
                         <i class="bi bi-clock-history me-2"></i> Set Jam Kerja
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('admin/perusahaan') ? 'active' : '' }}" href="{{ route('company-profile.index') }}">
+                        <i class="bi bi-building me-2"></i> Profil Perusahaan
                     </a>
                 </li>
                 <li class="nav-item">
@@ -240,6 +244,31 @@
                                                 {{ $leave->approver->name ?? 'Sistem' }}
                                             @endif
                                         </div>
+                                        @if($leave->status === 'Disetujui')
+                                            <a href="{{ route('admin.leaves.pdf', $leave->id) }}" target="_blank"
+                                               class="btn btn-sm btn-outline-primary mt-1" title="Unduh surat persetujuan">
+                                                <i class="bi bi-file-earmark-pdf"></i> Surat PDF
+                                            </a>
+                                        @endif
+                                    @elseif($leave->status === 'Ditolak')
+                                        <span class="badge bg-danger-subtle text-danger px-3 py-2" style="font-size: 12px;">
+                                            <i class="bi bi-x-circle-fill me-1"></i> Ditolak
+                                        </span>
+                                        <div class="small text-muted mt-1" style="font-size: 10px;">
+                                            Oleh: {{ $leave->rejecter->name ?? 'Sistem' }}
+                                            @if($leave->ditolak_at)
+                                                &middot; {{ $leave->ditolak_at->format('d/m/Y H:i') }}
+                                            @endif
+                                        </div>
+                                        @if($leave->alasan_tolak)
+                                            <div class="small text-danger mt-1" style="font-size: 10px;">
+                                                <i class="bi bi-chat-left-quote"></i> {{ $leave->alasan_tolak }}
+                                            </div>
+                                        @endif
+                                        <a href="{{ route('admin.leaves.pdf', $leave->id) }}" target="_blank"
+                                           class="btn btn-sm btn-outline-secondary mt-1" title="Unduh surat penolakan">
+                                            <i class="bi bi-file-earmark-pdf"></i> Surat PDF
+                                        </a>
                                     @else
                                         @php
                                             $currentCount = $leave->leaveApprovals->count();
@@ -282,6 +311,10 @@
                                                 <i class="bi bi-check-circle"></i> Setuju
                                             </button>
                                         </form>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal"
+                                                data-bs-target="#tolakModal{{ $leave->id }}" title="Tolak pengajuan">
+                                            <i class="bi bi-x-circle"></i> Tolak
+                                        </button>
                                         @else
                                         <span class="badge bg-success-subtle text-success me-1" title="Anda sudah menyetujui">
                                             <i class="bi bi-check-all"></i> Disetujui Anda
@@ -390,6 +423,45 @@
         </div>
     </div>
 </div>
+
+{{-- Modal tolak pengajuan, satu per pengajuan yang masih menunggu --}}
+@foreach($leaves as $leave)
+    @if($leave->status === 'Menunggu' && auth()->user()->isTrueApprover() && !$leave->leaveApprovals->where('user_id', auth()->id())->isNotEmpty())
+        <div class="modal fade" id="tolakModal{{ $leave->id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <form action="{{ route('admin.leaves.reject', $leave->id) }}" method="POST">
+                        @csrf
+                        @method('PUT')
+                        <div class="modal-header">
+                            <h5 class="modal-title">Tolak Pengajuan {{ $leave->jenis }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p class="text-muted">
+                                Pengajuan <strong>{{ $leave->karyawan->nama }}</strong>
+                                ({{ $leave->tanggal_mulai->format('d/m/Y') }} s.d. {{ $leave->tanggal_selesai->format('d/m/Y') }})
+                                akan ditolak. Alasan wajib diisi karena dicetak di surat penolakan.
+                            </p>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Alasan Penolakan <span class="text-danger">*</span></label>
+                                <textarea name="alasan_tolak" class="form-control" rows="3" required maxlength="500"
+                                          placeholder="Contoh: Pengajuan beririsan dengan cuti yang telah disetujui."></textarea>
+                                <small class="text-muted">Maksimal 500 karakter.</small>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-x-circle"></i> Ya, Tolak Pengajuan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    @endif
+@endforeach
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

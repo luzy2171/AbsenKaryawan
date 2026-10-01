@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rincian Kehadiran {{ $karyawan->nama }} - Absensi-BBM</title>
-    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    @include('partials.favicon')
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ asset('css/custom.css') }}">
+    <link rel="stylesheet" href="{{ \App\Helpers\Asset::url('css/custom.css') }}">
     <style>
         .excel-sheet { background: #fff; border: 1px solid #c9d3e0; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
         .excel-sheet .table { margin-bottom: 0; font-size: 12.5px; }
@@ -35,14 +35,8 @@
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col-md-2 sidebar p-3 d-none d-md-block">
-            <div class="d-flex align-items-center mb-4 px-2 py-3">
-                <div class="stat-icon bg-success text-white me-2"><i class="bi bi-fingerprint"></i></div>
-                <div>
-                    <h5 class="fw-bold m-0 text-success" style="font-size: 18px;">Absensi-BBM</h5>
-                    <small class="text-muted" style="font-size: 10px;">Attendance System</small>
-                </div>
-            </div>
+        <div class="col-md-2 sidebar p-3">
+            @include('partials.brand')
             <ul class="nav flex-column">
                 <li class="nav-item">
                     <a class="nav-link {{ request()->is('dashboard') ? 'active' : '' }}" href="{{ url('/dashboard') }}">
@@ -85,10 +79,22 @@
                     </a>
                 </li>
                 @endif
+                @if(auth()->user()->isTrueApprover())
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('admin/tanda-tangan*') ? 'active' : '' }}" href="{{ route('signature.edit') }}">
+                        <i class="bi bi-pen me-2"></i> Tanda Tangan
+                    </a>
+                </li>
+                @endif
                 @if(auth()->user()->isSuperadmin())
                 <li class="nav-item">
                     <a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}" href="{{ url('/admin/settings') }}">
                         <i class="bi bi-clock-history me-2"></i> Set Jam Kerja
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('admin/perusahaan') ? 'active' : '' }}" href="{{ route('company-profile.index') }}">
+                        <i class="bi bi-building me-2"></i> Profil Perusahaan
                     </a>
                 </li>
                 <li class="nav-item">

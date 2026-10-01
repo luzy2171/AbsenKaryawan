@@ -15,7 +15,7 @@ class EnsureUserIsSuperadmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check() || !Auth::user()->isSuperadmin()) {
+        if (! Auth::check() || ! Auth::user()->isSuperadmin()) {
             abort(403, 'Akses ditolak. Hanya Superadmin yang dapat mengakses halaman ini.');
         }
 

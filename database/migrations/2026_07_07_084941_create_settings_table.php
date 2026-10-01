@@ -2,8 +2,8 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB; // Tambahkan ini untuk menggunakan Query Builder
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema; // Tambahkan ini untuk menggunakan Query Builder
 
 return new class extends Migration
 {
@@ -27,21 +27,21 @@ return new class extends Migration
                 'value' => '09:00',
                 'description' => 'Jam standar masuk kerja karyawan (Format HH:MM)',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ],
             [
                 'key' => 'jam_pulang',
                 'value' => '18:00',
                 'description' => 'Jam standar pulang kerja karyawan (Format HH:MM)',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ],
             [
                 'key' => 'toleransi_terlambat',
                 'value' => '120',
                 'description' => 'Batas toleransi keterlambatan dalam hitungan menit',
                 'created_at' => now(),
-                'updated_at' => now()
+                'updated_at' => now(),
             ],
         ]);
     }

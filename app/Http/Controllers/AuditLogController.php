@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\AuditLog;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class AuditLogController extends Controller
 {
@@ -34,16 +35,16 @@ class AuditLogController extends Controller
         if ($request->filled('bulan') && $request->filled('tahun')) {
             $bulan = $request->bulan;
             $tahun = $request->tahun;
-            
+
             $start = Carbon::create($tahun, $bulan, 1)->startOfMonth()->startOfDay();
             $end = Carbon::create($tahun, $bulan, 1)->endOfMonth()->endOfDay();
-            
+
             $query->whereBetween('created_at', [$start, $end]);
-            
+
             // Atur input start_date dan end_date untuk mengisi nilai di filter UI
             $request->merge([
                 'start_date' => $start->toDateString(),
-                'end_date' => $end->toDateString()
+                'end_date' => $end->toDateString(),
             ]);
         }
         // Filter by date range (Normal filter UI)
@@ -57,7 +58,7 @@ class AuditLogController extends Controller
         // Get unique modules and actions for filter
         $modules = AuditLog::select('module')->distinct()->pluck('module');
         $actions = AuditLog::select('action')->distinct()->pluck('action');
-        $users = \App\Models\User::select('id', 'name', 'username')->get();
+        $users = User::select('id', 'name', 'username')->get();
 
         return view('admin.audit-logs.index', compact('logs', 'modules', 'actions', 'users'));
     }
@@ -68,6 +69,7 @@ class AuditLogController extends Controller
     public function show($id)
     {
         $log = AuditLog::with('user')->findOrFail($id);
+
         return view('admin.audit-logs.show', compact('log'));
     }
 
@@ -93,7 +95,7 @@ class AuditLogController extends Controller
 
         $logs = $query->get();
 
-        $filename = "Audit_Log_" . date('d-m-Y_His') . ".xls";
+        $filename = 'Audit_Log_'.date('d-m-Y_His').'.xls';
 
         $html = '
         <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
@@ -127,13 +129,13 @@ class AuditLogController extends Controller
         foreach ($logs as $log) {
             $html .= '
             <tr>
-                <td class="cell-center">' . $no++ . '</td>
-                <td class="cell-center">' . $log->created_at->format('d/m/Y H:i:s') . '</td>
-                <td class="cell-left">' . ($log->user ? $log->user->name : 'System') . '</td>
-                <td class="cell-center">' . strtoupper($log->module) . '</td>
-                <td class="cell-center">' . strtoupper($log->action) . '</td>
-                <td class="cell-left">' . $log->description . '</td>
-                <td class="cell-center">' . $log->ip_address . '</td>
+                <td class="cell-center">'.$no++.'</td>
+                <td class="cell-center">'.$log->created_at->format('d/m/Y H:i:s').'</td>
+                <td class="cell-left">'.($log->user ? $log->user->name : 'System').'</td>
+                <td class="cell-center">'.strtoupper($log->module).'</td>
+                <td class="cell-center">'.strtoupper($log->action).'</td>
+                <td class="cell-left">'.$log->description.'</td>
+                <td class="cell-center">'.$log->ip_address.'</td>
             </tr>';
         }
 
@@ -143,9 +145,9 @@ class AuditLogController extends Controller
         </html>';
 
         return response($html, 200, [
-            'Content-Type'        => 'application/vnd.ms-excel; charset=utf-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Cache-Control'       => 'max-age=0'
+            'Content-Type' => 'application/vnd.ms-excel; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Cache-Control' => 'max-age=0',
         ]);
     }
 }

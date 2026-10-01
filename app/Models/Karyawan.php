@@ -10,7 +10,7 @@ class Karyawan extends Model
     use HasFactory;
 
     protected $fillable = [
-        'id_karyawan', 'nama', 'departemen', 'jabatan', 'status', 'jatah_cuti_tahunan'
+        'id_karyawan', 'nama', 'departemen', 'jabatan', 'status', 'jatah_cuti_tahunan',
     ];
 
     public function attendances()
@@ -22,7 +22,7 @@ class Karyawan extends Model
     {
         return $this->hasMany(Lembur::class, 'karyawan_id');
     }
-    
+
     public function leaves()
     {
         return $this->hasMany(Leave::class, 'karyawan_id');
@@ -38,7 +38,7 @@ class Karyawan extends Model
             ->sum(function ($leave) {
                 return $leave->tanggal_mulai->diffInDays($leave->tanggal_selesai) + 1;
             });
-            
+
         return max(0, $this->jatah_cuti_tahunan - $cutiTerpakai);
     }
 }

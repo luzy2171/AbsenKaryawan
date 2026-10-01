@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Absensi-BBM</title>
-    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    @include('partials.favicon')
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -29,12 +29,21 @@
             height: 64px;
             background: #2e7d32;
             color: #fff;
-            border-radius: 16px;
+            border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 28px;
             margin: 0 auto 16px;
+            overflow: hidden;
+        }
+        .brand-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+            background: #fff;
+            padding: 3px;
         }
     </style>
 </head>
@@ -44,9 +53,13 @@
     <div class="card login-card p-4 p-md-5 mx-auto">
         <div class="text-center mb-4">
             <div class="brand-icon">
-                <i class="bi bi-fingerprint"></i>
+                @if($companyProfile->logoUrl())
+                    <img src="{{ $companyProfile->logoUrl() }}" alt="Logo {{ $companyProfile->nama() }}" width="64" height="64">
+                @else
+                    <i class="bi bi-fingerprint"></i>
+                @endif
             </div>
-            <h4 class="fw-bold text-success mb-1">Absensi-BBM</h4>
+            <h4 class="fw-bold text-success mb-1">{{ $companyProfile->nama() }}</h4>
             <p class="text-muted small mb-0">Masuk menggunakan akun Administrator</p>
         </div>
 

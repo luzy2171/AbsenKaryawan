@@ -15,7 +15,7 @@ class EnsureUserIsTrueApprover
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check() || !Auth::user()->isTrueApprover()) {
+        if (! Auth::check() || ! Auth::user()->isTrueApprover()) {
             abort(403, 'Akses ditolak. Hanya Approver dan Superadmin yang dapat mengakses halaman ini.');
         }
 

@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Helpers\AuditLogger;
 use App\Models\Karyawan;
 use App\Models\MachineStatus;
-use App\Helpers\AuditLogger;
 use App\Services\SolutionSoapService;
+use App\Services\SolutionX100CService;
+use Illuminate\Http\Request;
 
 class KaryawanController extends Controller
 {
@@ -16,6 +17,7 @@ class KaryawanController extends Controller
     public function index()
     {
         $karyawans = Karyawan::orderBy('id_karyawan', 'asc')->get();
+
         return view('karyawan.index', compact('karyawans'));
     }
 
@@ -24,23 +26,23 @@ class KaryawanController extends Controller
      */
     public function store(Request $request)
     {
-        if (!auth()->user()->canEdit()) {
+        if (! auth()->user()->canEdit()) {
             abort(403, 'Akses ditolak. Role Anda tidak dapat menambah karyawan.');
         }
         $request->validate([
             'id_karyawan' => ['required', 'regex:/^\d{1,5}$/', 'unique:karyawans,id_karyawan'],
-            'nama'        => 'required|string|max:255',
-            'departemen'  => 'nullable|string',
-            'jabatan'     => 'nullable|string',
+            'nama' => 'required|string|max:255',
+            'departemen' => 'nullable|string',
+            'jabatan' => 'nullable|string',
         ]);
 
         // 2. Simpan ke database internal website
         $karyawan = Karyawan::create([
             'id_karyawan' => $request->id_karyawan,
-            'nama'        => $request->nama,
-            'departemen'  => $request->departemen,
-            'jabatan'     => $request->jabatan,
-            'status'      => 'Aktif'
+            'nama' => $request->nama,
+            'departemen' => $request->departemen,
+            'jabatan' => $request->jabatan,
+            'status' => 'Aktif',
         ]);
 
         // Log audit
@@ -52,7 +54,7 @@ class KaryawanController extends Controller
     /**
      * FITUR BARU: Sinkronisasi Otomatis Semua User dari Perangkat ke Database Web
      */
-    public function syncDariMesin(Request $request, \App\Services\SolutionX100CService $zktecoService, SolutionSoapService $soapService)
+    public function syncDariMesin(Request $request, SolutionX100CService $zktecoService, SolutionSoapService $soapService)
     {
         $request->validate([
             'mesin_tujuan' => 'nullable|in:solution,x100c',
@@ -61,7 +63,7 @@ class KaryawanController extends Controller
         $startTime = microtime(true);
         $machine = MachineStatus::defaultForType('solution');
 
-        if (!$machine) {
+        if (! $machine) {
             return back()->with('error', 'Tidak ada mesin Solution yang dikonfigurasi.');
         }
 
@@ -73,7 +75,7 @@ class KaryawanController extends Controller
         $uniquePins = [];
 
         foreach ((array) $zkUsers as $user) {
-            if (!isset($user['pin']) || $user['pin'] === '' || in_array($user['pin'], $uniquePins, true)) {
+            if (! isset($user['pin']) || $user['pin'] === '' || in_array($user['pin'], $uniquePins, true)) {
                 continue;
             }
 
@@ -83,6 +85,7 @@ class KaryawanController extends Controller
 
         if (empty($usersDariMesin)) {
             $machine->updateStatus($connected, $connected ? round((microtime(true) - $startTime) * 1000) : null);
+
             return back()->with('error', 'Gagal mengambil data dari mesin. Pastikan mesin dalam kondisi terhubung (Online).');
         }
 
@@ -96,13 +99,13 @@ class KaryawanController extends Controller
         foreach ($usersDariMesin as $user) {
             $exists = Karyawan::where('id_karyawan', $user['pin'])->exists();
 
-            if (!$exists) {
+            if (! $exists) {
                 Karyawan::create([
                     'id_karyawan' => $user['pin'],
-                    'nama'        => $user['name'],
-                    'departemen'  => '-',
-                    'jabatan'     => 'Staf',
-                    'status'      => 'Aktif'
+                    'nama' => $user['name'],
+                    'departemen' => '-',
+                    'jabatan' => 'Staf',
+                    'status' => 'Aktif',
                 ]);
                 $karyawanBaru++;
             }
@@ -117,7 +120,7 @@ class KaryawanController extends Controller
     /**
      * Menghapus karyawan dari Web
      */
-    protected function serviceForMachine($machine, \App\Services\SolutionX100CService $binaryService, SolutionSoapService $soapService)
+    protected function serviceForMachine($machine, SolutionX100CService $binaryService, SolutionSoapService $soapService)
     {
         $transport = strtolower((string) env('SOLUTION_TRANSPORT', 'soap'));
         if ($transport !== 'binary' && ($transport === 'soap' || (int) ($machine->port ?? 0) === 80)) {
@@ -126,16 +129,18 @@ class KaryawanController extends Controller
                 (int) env('SOLUTION_SOAP_PORT', 80),
                 $machine->username
             );
+
             return $soapService;
         }
 
         $binaryService->setConnection($machine->machine_ip, $machine->port ?? 4370);
+
         return $binaryService;
     }
 
     public function destroy($id)
     {
-        if (!auth()->user()->isTrueApprover()) {
+        if (! auth()->user()->isTrueApprover()) {
             abort(403, 'Akses ditolak. Hanya Approver dan Superadmin yang dapat menghapus karyawan.');
         }
 

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rincian_Kehadiran_{{ $karyawan->id_karyawan }}_{{ $periode_label }}</title>
-    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    @include('partials.favicon')
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <style>
@@ -25,7 +25,9 @@
         .kartu-abu { background: #f2f2f2; border: 1px solid #d0d0d0; color: #6c757d; font-weight: 600; font-size: 9pt; padding: 2px 4px; }
         .identitas { border: 1px solid #8ea9db; border-collapse: collapse; margin-bottom: 14px; width: auto; }
         .identitas td { border: 1px solid #8ea9db; padding: 5px 10px; font-size: 10pt; }
+        .kop-logo { width: 78px; height: 78px; object-fit: contain; object-position: center; }
         .ttd { margin-top: 40px; text-align: center; font-size: 10pt; }
+        .ttd-nama { display: inline-block; border-top: 1px solid #333; padding: 0 40px; font-weight: 600; }
         @media print {
             .no-print { display: none !important; }
             body { font-size: 10pt; }
@@ -40,25 +42,23 @@
 </head>
 <body onload="window.print()">
 
-<div class="container-fluid mt-3 px-4">
+<div class="container-fluid mt-3 px-4" style="position: relative;">
+    @include('partials.watermark')
+    <div style="position: relative; z-index: 1;">
 
     <div class="no-print mb-3 text-end">
         <button onclick="window.print()" class="btn btn-sm btn-dark">Cetak Ulang</button>
         <button onclick="window.close()" class="btn btn-sm btn-secondary">Tutup Halaman</button>
     </div>
 
-    <div class="kop d-flex justify-content-between align-items-start">
-        <div>
-            <div class="judul-laporan">RINCIAN KEHADIRAN &amp; JAM KERJA KARYAWAN</div>
-            <div class="sub-kop fw-semibold">PT. Kawan Solution</div>
-            <div class="sub-kop">Sistem Informasi Manajemen Absensi Karyawan</div>
-        </div>
-        <div class="text-end">
-            <div class="sub-kop">Periode: <strong>{{ $periode_label }}</strong></div>
-            <div class="sub-kop">{{ \Carbon\Carbon::parse($mulai)->format('d/m/Y') }} s.d {{ \Carbon\Carbon::parse($selesai)->format('d/m/Y') }}</div>
-            <div class="sub-kop">Dicetak: {{ \Carbon\Carbon::now()->format('d/m/Y H:i') }} WIB</div>
-        </div>
-    </div>
+    @include('partials.kop', [
+        'kopJudul' => 'RINCIAN KEHADIRAN & JAM KERJA KARYAWAN',
+        'kopKanan' => [
+            'Periode: <strong>' . $periode_label . '</strong>',
+            \Carbon\Carbon::parse($mulai)->format('d/m/Y') . ' s.d ' . \Carbon\Carbon::parse($selesai)->format('d/m/Y'),
+            'Dicetak: ' . \Carbon\Carbon::now()->format('d/m/Y H:i') . ' WIB',
+        ],
+    ])
 
     <table class="identitas">
         <tr>
@@ -140,13 +140,12 @@
 
     <div class="ttd">
         <div>Mengetahui,</div>
-        <div style="margin-top: 6px; font-weight: 600;">Finance / HRD</div>
+        <div style="margin-top: 6px; font-weight: 600;">{{ $companyProfile->get('jabatan_ttd', 'Finance / HRD') }}</div>
         <div style="height: 70px;"></div>
-        <div style="display: inline-block; border-top: 1px solid #333; padding: 0 40px; font-weight: 600;">
-            {{ auth()->user()->name }}
-        </div>
+        <div class="ttd-nama">{{ $companyProfile->get('nama_ttd') ?: auth()->user()->name }}</div>
     </div>
 </div>
 
+    </div>
 </body>
 </html>

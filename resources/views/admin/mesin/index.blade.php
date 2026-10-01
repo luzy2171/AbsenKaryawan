@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kontrol Pusat - Absensi-BBM</title>
-    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    @include('partials.favicon')
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <link rel="stylesheet" href="{{ asset('css/custom.css') }}">
+    <link rel="stylesheet" href="{{ \App\Helpers\Asset::url('css/custom.css') }}">
     <style>
         .table-responsive { max-height: 400px; overflow-y: auto; }
         .table thead th { position: sticky; top: 0; background: #f8f9fa; z-index: 1; }
@@ -20,11 +20,8 @@
 
 <div class="container-fluid">
     <div class="row">
-        <div class="col-md-2 sidebar p-3 d-none d-md-block">
-            <div class="d-flex align-items-center mb-4 px-2 py-3">
-                <div class="stat-icon bg-success text-white me-2" style="width: 40px; height: 40px;"><i class="bi bi-fingerprint"></i></div>
-                <div><h5 class="fw-bold m-0 text-success" style="font-size: 18px;">Absensi-BBM</h5><small class="text-muted" style="font-size: 10px;">Attendance System</small></div>
-            </div>
+        <div class="col-md-2 sidebar p-3">
+            @include('partials.brand')
             <ul class="nav flex-column">
                 <li class="nav-item"><a class="nav-link" href="{{ url('/dashboard') }}"><i class="bi bi-grid me-2"></i> Dashboard</a></li>
                 <li class="nav-item"><a class="nav-link" href="{{ url('/karyawan') }}"><i class="bi bi-people me-2"></i> Karyawan</a></li>
@@ -44,9 +41,18 @@
                     <li class="nav-item"><a class="nav-link" href="{{ route('admin.leaves.index') }}"><i class="bi bi-envelope-paper me-2"></i> Izin & Cuti</a></li>
                     @if(auth()->user()->isTrueApprover())
                     <li class="nav-item"><a class="nav-link" href="{{ route('admin.cuti.control') }}"><i class="bi bi-sliders me-2"></i> Kontrol Cuti</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('admin.cuti.control') }}"><i class="bi bi-sliders me-2"></i> Kontrol Cuti</a></li>
+                    @endif
+                    @if(auth()->user()->isTrueApprover())
+                    <li class="nav-item">
+                        <a class="nav-link {{ request()->is('admin/tanda-tangan*') ? 'active' : '' }}" href="{{ route('signature.edit') }}">
+                            <i class="bi bi-pen me-2"></i> Tanda Tangan
+                        </a>
+                    </li>
                     @endif
                     @if(auth()->user()->isSuperadmin())
                     <li class="nav-item"><a class="nav-link" href="{{ url('/admin/settings') }}"><i class="bi bi-clock-history me-2"></i> Set Jam Kerja</a></li>
+                    <li class="nav-item"><a class="nav-link {{ request()->is('admin/perusahaan') ? 'active' : '' }}" href="{{ route('company-profile.index') }}"><i class="bi bi-building me-2"></i> Profil Perusahaan</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ url('/pengaturan') }}"><i class="bi bi-gear me-2"></i> Kontrol Mesin</a></li>
                     
                     <li class="nav-item"><a class="nav-link" href="{{ route('admin.maintenance.index') }}"><i class="bi bi-database-fill-gear me-2"></i> Maintenance DB</a></li>
@@ -158,7 +164,7 @@
                     <div class="card border-0 shadow-sm rounded-4 h-100">
                         <div class="card-body p-4">
                             <h6 class="fw-bold mb-3"><i class="bi bi-upload text-primary me-2"></i>Kirim Data ke Mesin</h6>
-                            <p class="text-muted small">Kirim akun karyawan lokal ke mesin absensi fisik (Sinkronisasi Web ke Mesin).</p>
+                            <p class="text-muted small">Kirim akun karyawan lokal ke mesin absensi fisik. Bisa pilih banyak karyawan sekaligus.</p>
                             <form action="{{ route('admin.mesin.kirim') }}" method="POST">
                                 @csrf
                                 <div class="mb-3">
@@ -170,14 +176,25 @@
                                             @endforeach
                                         </select>
                                 </div>
-                                <div class="mb-3">
-                                    <label class="form-label text-muted small fw-bold mb-1">2. Pilih Karyawan</label>
-                                    <select class="form-select bg-light border-0" name="karyawan_id" id="kirim_karyawan_id" required disabled>
-                                        <option value="">-- Pilih Mesin Terlebih Dahulu --</option>
+                                <div class="mb-2">
+                                    <label class="form-label text-muted small fw-bold mb-1">2. Pilih Karyawan (bisa lebih dari satu)</label>
+                                    <select class="form-select bg-light border-0" name="karyawan_id[]" id="kirim_karyawan_id"
+                                            multiple size="8" required disabled>
+                                        <option value="">-- Pilih Mesin terlebih dahulu --</option>
                                     </select>
+                                    <small class="text-muted d-block mt-1">Tahan Ctrl / Shift untuk memilih beberapa karyawan.</small>
+                                    <div class="d-flex gap-2 mt-2">
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="kirim_pilih_semua">
+                                            <i class="bi bi-check2-all me-1"></i> Pilih Semua
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary" id="kirim_batal_pilih">
+                                            <i class="bi bi-x-lg me-1"></i> Batal Pilih
+                                        </button>
+                                    </div>
+                                    <small class="text-muted d-block mt-2" id="kirim_hitung">Belum ada karyawan dipilih</small>
                                 </div>
                                 <button type="submit" class="btn btn-primary w-100 fw-bold rounded-3">
-                                    <i class="bi bi-send me-1"></i> Kirim ke Mesin
+                                    <i class="bi bi-send me-1"></i> Kirim Terpilih ke Mesin
                                 </button>
                             </form>
                         </div>
@@ -203,6 +220,140 @@
                                     <i class="bi bi-cloud-download me-1"></i> Tarik Data
                                 </button>
                             </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tarik Sidik Jari dari Mesin -->
+            <div class="row g-4 mb-4 fade-in">
+                <div class="col-md-5">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body p-4">
+                            <h6 class="fw-bold mb-3"><i class="bi bi-fingerprint text-primary me-2"></i>Tarik Sidik Jari</h6>
+                            <p class="text-muted small">
+                                Daftarkan sidik jari di mesin terlebih dahulu, lalu tarik template-nya ke server
+                                dengan protocol <code>GetUserTemplate</code>. Hanya untuk mesin bertipe Solution (SOAP).
+                            </p>
+                            <form action="{{ route('admin.mesin.sidik.tarik') }}" method="POST">
+                                @csrf
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-bold mb-1">Mesin Sumber</label>
+                                    <select class="form-select bg-light border-0" name="machine_id" required>
+                                        <option value="">-- Mesin --</option>
+                                        @foreach($machines as $machine)
+                                            <option value="{{ $machine->id }}">{{ $machine->machine_name }} ({{ $machine->machine_ip }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-bold mb-1">Karyawan</label>
+                                    <select class="form-select bg-light border-0" name="karyawan_id" required>
+                                        <option value="">-- Pilih Karyawan --</option>
+                                        @foreach(\App\Models\Karyawan::orderBy('nama')->get() as $k)
+                                            <option value="{{ $k->id }}">{{ $k->nama }} (PIN: {{ $k->id_karyawan }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 fw-bold rounded-3">
+                                    <i class="bi bi-cloud-arrow-down me-1"></i> Tarik Sidik Jari
+                                </button>
+                            </form>
+
+                            <hr class="my-4">
+
+                            <h6 class="fw-bold mb-2"><i class="bi bi-upload text-success me-2"></i>Kirim Sidik Jari ke Mesin</h6>
+                            <p class="text-muted small">
+                                Mesin ini tidak bisa dipicu untuk menampilkan layar pemindaian, jadi template
+                                hasil export dari software PC mesin diunggah lewat <code>SetUserTemplate</code>.
+                            </p>
+                            <form action="{{ route('admin.mesin.sidik.kirim') }}" method="POST" enctype="multipart/form-data">
+                                @csrf
+                                <div class="mb-2">
+                                    <label class="form-label text-muted small fw-bold mb-1">Mesin Tujuan</label>
+                                    <select class="form-select bg-light border-0" name="machine_id" required>
+                                        <option value="">-- Mesin --</option>
+                                        @foreach($machines as $machine)
+                                            <option value="{{ $machine->id }}">{{ $machine->machine_name }} ({{ $machine->machine_ip }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label text-muted small fw-bold mb-1">Karyawan (PIN)</label>
+                                    <select class="form-select bg-light border-0" name="karyawan_id" required>
+                                        <option value="">-- Pilih Karyawan --</option>
+                                        @foreach(\App\Models\Karyawan::orderBy('nama')->get() as $k)
+                                            <option value="{{ $k->id }}">{{ $k->nama }} (PIN: {{ $k->id_karyawan }})</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label text-muted small fw-bold mb-1">Slot Jari</label>
+                                    <select class="form-select bg-light border-0" name="finger_id" required>
+                                        @for ($f = 0; $f <= 9; $f++)
+                                            <option value="{{ $f }}">{{ $f }} — {{ (new \App\Models\Fingerprint(['finger_id' => $f]))->namaJari() }}</option>
+                                        @endfor
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted small fw-bold mb-1">File Template</label>
+                                    <input type="file" name="template" class="form-control form-control-sm bg-light border-0" required>
+                                    <small class="text-muted d-block mt-1">
+                                        Base64 atau biner, maksimal 8 KB. Urutan: 0-5 jari kiri, 6-9 jari kanan.
+                                    </small>
+                                </div>
+                                <button type="submit" class="btn btn-success w-100 fw-bold rounded-3">
+                                    <i class="bi bi-send me-1"></i> Kirim ke Mesin
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-7">
+                    <div class="card border-0 shadow-sm rounded-4 h-100">
+                        <div class="card-body p-4">
+                            <h6 class="fw-bold mb-3"><i class="bi bi-database text-success me-2"></i>Sidik Jari Tersimpan</h6>
+                            <div class="table-responsive" style="max-height: 260px; overflow-y: auto;">
+                                <table class="table table-sm table-bordered align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Karyawan</th>
+                                            <th>Jari</th>
+                                            <th>Slot</th>
+                                            <th>Ukuran</th>
+                                            <th>Mesin</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse($fingerprints as $fp)
+                                            <tr>
+                                                <td>{{ $fp->karyawan->nama ?? '—' }}</td>
+                                                <td class="small">{{ $fp->namaJari() }}</td>
+                                                <td class="text-center">{{ $fp->finger_id }}</td>
+                                                <td class="text-center">{{ number_format($fp->size) }} B</td>
+                                                <td class="small text-muted">{{ $fp->machine->machine_name ?? '—' }}</td>
+                                                <td class="text-end">
+                                                    <form action="{{ route('admin.mesin.sidik.destroy', $fp->id) }}" method="POST"
+                                                          onsubmit="return confirm('Hapus sidik jari ini dari database lokal? Data di mesin tidak berubah.')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button class="btn btn-sm btn-outline-danger border-0" title="Hapus dari database lokal">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="6" class="text-center text-muted py-4">
+                                                    Belum ada sidik jari yang ditarik dari mesin.
+                                                </td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -242,9 +393,15 @@
                                             </thead>
                                             <tbody>
                                                 @forelse($usersSol as $u)
-                                                    @php $isLocal = $karyawans->where('id_karyawan', (string)$u['pin'])->first(); @endphp
+                                                    @php
+                                                        // Cocokkan ke id_karyawan: mesin menandai user
+                                                        // dengan <PIN2>, sedangkan <PIN> adalah record
+                                                        // id internal yang dialokasikan mesin.
+                                                        $idMesin = trim((string) ($u['pin2'] ?? '')) ?: (string) $u['pin'];
+                                                        $isLocal = $karyawans->where('id_karyawan', $idMesin)->first();
+                                                    @endphp
                                                     <tr>
-                                                        <td class="ps-4 fw-bold {{ $isLocal ? 'text-primary' : 'text-danger' }}">{{ $u['pin'] }}</td>
+                                                        <td class="ps-4 fw-bold {{ $isLocal ? 'text-primary' : 'text-danger' }}">{{ $idMesin }}</td>
                                                         <td>{{ $u['name'] ?: '-' }}</td>
                                                         <td class="text-center">
                                                             @if($isLocal)
@@ -501,6 +658,39 @@
             selectKaryawanKirim.disabled = true;
         }
     });
+
+    // Pilih semua karyawan yang tampil (belum ada di mesin tujuan)
+    const btnPilihSemua = document.getElementById('kirim_pilih_semua');
+    if (btnPilihSemua && selectKaryawanKirim) {
+        btnPilihSemua.addEventListener('click', function () {
+            if (selectKaryawanKirim.disabled) {
+                return;
+            }
+            Array.from(selectKaryawanKirim.options).forEach((o) => { o.selected = true; });
+            perbaruiHitunganKirim();
+        });
+    }
+
+    const btnBatalPilih = document.getElementById('kirim_batal_pilih');
+    if (btnBatalPilih && selectKaryawanKirim) {
+        btnBatalPilih.addEventListener('click', function () {
+            Array.from(selectKaryawanKirim.options).forEach((o) => { o.selected = false; });
+            perbaruiHitunganKirim();
+        });
+    }
+
+    function perbaruiHitunganKirim() {
+        const info = document.getElementById('kirim_hitung');
+        if (!info || !selectKaryawanKirim) {
+            return;
+        }
+        const n = Array.from(selectKaryawanKirim.selectedOptions).length;
+        info.textContent = n > 0 ? n + ' karyawan dipilih' : 'Belum ada karyawan dipilih';
+    }
+
+    if (selectKaryawanKirim) {
+        selectKaryawanKirim.addEventListener('change', perbaruiHitunganKirim);
+    }
 
     const cleanMachine = document.getElementById('cleanMachine');
     if (cleanMachine) {

@@ -29,20 +29,129 @@ body {
     box-shadow: var(--shadow-sm);
     position: sticky;
     top: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Sidebar hanya tampil di layar >= md.
+   Jangan pakai kelas Bootstrap "d-none d-md-block" di sini: d-md-block memakai
+   display: block !important yang mematikan display: flex di bawah, sehingga
+   daftar menu tidak lagi jadi area scroll dan bagian bawah terpotong. */
+@media (max-width: 767.98px) {
+    .sidebar {
+        display: none !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .sidebar {
+        display: flex !important;
+    }
+}
+
+/* Brand di sidebar tetap terlihat, tidak ikut ter-scroll */
+.sidebar > .brand-block {
+    flex: 0 0 auto;
+}
+
+/* Logo perusahaan: bulat, aman untuk logo landscape/panjang */
+.brand-logo {
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    border-radius: 50%;
+    object-fit: contain;
+    object-position: center;
+    background: #ffffff;
+    border: 1px solid var(--gray-200);
+    padding: 3px;
+    box-shadow: var(--shadow-sm);
+    flex: 0 0 auto;
+}
+
+.brand-logo-fallback {
+    width: 64px;
+    height: 64px;
+    min-width: 64px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+}
+
+.brand-text {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.brand-title {
+    font-size: 15px;
+    line-height: 1.2;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
+}
+
+.brand-subtitle {
+    font-size: 10px;
+}
+
+/* Daftar menu menjadi area scroll sendiri.
+   flex-wrap: nowrap itu wajib: .nav punya flex-wrap: wrap dari Bootstrap, dan
+   karena .nav juga flex-direction: column, item yang tidak muat akan wraps ke
+   kolom sebelah kanan (lalu hilang karena overflow-x: hidden) alih-alih
+   jadi scroll vertikal. */
+.sidebar > .nav {
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 6px;
+    margin-bottom: 0;
+    scrollbar-width: thin;
+    scrollbar-color: #cfd8dc transparent;
+}
+
+.sidebar > .nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar > .nav::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar > .nav::-webkit-scrollbar-thumb {
+    background: #cfd8dc;
+    border-radius: 3px;
+}
+
+.sidebar > .nav::-webkit-scrollbar-thumb:hover {
+    background: #b0bec5;
+}
+
+/* Item logout tetap menempel di bawah saat menu tidak penuh */
+.sidebar > .nav > .nav-item.mt-auto {
+    margin-top: auto !important;
+}
+
+/* Judul seksi menu tidak ikut terpotong saat di-scroll */
+.sidebar > .nav > .nav-item > small {
+    white-space: nowrap;
 }
 
 .nav-link { 
     color: var(--gray-800); 
-    border-radius: 10px; 
+    border-radius: 10px;
     margin-bottom: 6px;
     padding: 12px 16px;
-    transition: all 0.3s ease;
+    transition: background-color 0.3s ease, color 0.3s ease;
     font-weight: 500;
 }
 
 .nav-link:hover {
     background-color: var(--gray-100);
-    transform: translateX(4px);
 }
 
 .nav-link.active { 

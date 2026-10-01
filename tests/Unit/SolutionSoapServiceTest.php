@@ -9,7 +9,7 @@ class SolutionSoapServiceTest extends TestCase
 {
     public function test_user_rows_are_converted_from_soap_response(): void
     {
-        $service = new TestableSolutionSoapService();
+        $service = new TestableSolutionSoapService;
         $response = '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><GetAllUserInfoResponse><Row><Index>1</Index><PIN>1001</PIN><Name>Alice</Name><Privilege>14</Privilege></Row></GetAllUserInfoResponse></soap:Body></soap:Envelope>';
 
         self::assertSame([
@@ -24,7 +24,7 @@ class SolutionSoapServiceTest extends TestCase
 
     public function test_attendance_rows_accept_soap_date_time_and_verification(): void
     {
-        $service = new TestableSolutionSoapService();
+        $service = new TestableSolutionSoapService;
         $response = '<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"><soap:Body><GetAttLogResponse><Row><PIN>1001</PIN><DateTime>2026-09-25 08:30:00</DateTime><Verified>1</Verified><Status>0</Status></Row></GetAttLogResponse></soap:Body></soap:Envelope>';
 
         self::assertSame([[

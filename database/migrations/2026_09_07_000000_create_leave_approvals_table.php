@@ -14,14 +14,14 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
             $table->timestamps();
         });
-        
+
         // Let's also insert a default setting for required_approvals
         DB::table('settings')->insertOrIgnore([
             'key' => 'required_approvals',
             'value' => '1',
             'description' => 'Jumlah minimal persetujuan untuk pengajuan izin/sakit',
             'created_at' => now(),
-            'updated_at' => now()
+            'updated_at' => now(),
         ]);
     }
 

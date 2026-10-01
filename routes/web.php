@@ -1,20 +1,21 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AbsensiController;
+use App\Http\Controllers\Admin\DatabaseMaintenanceController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\CompanyProfileController;
+use App\Http\Controllers\CutiControlController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\KaryawanController;
+use App\Http\Controllers\LaporanController;
+use App\Http\Controllers\LeaveController;
+use App\Http\Controllers\MesinAbsensiController;
 use App\Http\Controllers\PengaturanController;
 use App\Http\Controllers\SettingController;
-use App\Http\Controllers\AuditLogController;
-use App\Http\Controllers\Admin\DatabaseMaintenanceController;
-use App\Http\Controllers\LeaveController;
-use App\Http\Controllers\CutiControlController;
-use App\Http\Controllers\MesinAbsensiController;
-use App\Http\Controllers\LaporanController;
-
+use App\Http\Controllers\SignatureController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,6 +47,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/karyawan', [KaryawanController::class, 'index'])->name('karyawan.index');
         Route::get('admin/leaves', [LeaveController::class, 'index'])->name('admin.leaves.index');
         Route::delete('admin/leaves/{id}', [LeaveController::class, 'destroy'])->name('admin.leaves.destroy');
+        // Surat PDF hanya dibaca, jadi boleh dibuka admin juga. Tombolnya sudah
+        // tampil di daftar pengajuan untuk semua approver.
+        Route::get('admin/leaves/{id}/pdf', [LeaveController::class, 'pdf'])->name('admin.leaves.pdf');
         Route::get('laporan/kehadiran', [LaporanController::class, 'index'])->name('laporan.kehadiran');
         Route::get('laporan/kehadiran/cetak', [LaporanController::class, 'cetak'])->name('laporan.kehadiran.cetak');
         Route::get('laporan/kehadiran/excel', [LaporanController::class, 'exportExcel'])->name('laporan.kehadiran.excel');
@@ -59,7 +63,15 @@ Route::middleware('auth')->group(function () {
         Route::get('admin/cuti-control', [CutiControlController::class, 'index'])->name('admin.cuti.control');
         Route::put('admin/cuti-control/{id}', [CutiControlController::class, 'update'])->name('admin.cuti.control.update');
         Route::put('admin/leaves/{id}/approve', [LeaveController::class, 'approve'])->name('admin.leaves.approve');
-        
+        Route::put('admin/leaves/{id}/reject', [LeaveController::class, 'reject'])->name('admin.leaves.reject');
+        Route::get('admin/tanda-tangan', [SignatureController::class, 'edit'])->name('signature.edit');
+        Route::post('admin/tanda-tangan', [SignatureController::class, 'update'])->name('signature.update');
+        Route::delete('admin/tanda-tangan', [SignatureController::class, 'destroy'])->name('signature.destroy');
+        // Format nomor surat & pratinjau surat, disatukan di halaman tanda tangan
+        // supaya tidak membingungkan di daftar pengajuan.
+        Route::put('admin/tanda-tangan/format-nomor', [SignatureController::class, 'updateFormatNomor'])->name('signature.format_nomor');
+        Route::get('admin/tanda-tangan/pratinjau', [SignatureController::class, 'preview'])->name('signature.preview');
+
         Route::delete('/karyawan/{id}', [KaryawanController::class, 'destroy'])->name('karyawan.destroy');
         Route::get('admin/audit-logs', [AuditLogController::class, 'index'])->name('admin.audit-logs.index');
         Route::get('admin/audit-logs/export', [AuditLogController::class, 'export'])->name('admin.audit-logs.export');
@@ -75,6 +87,9 @@ Route::middleware('auth')->group(function () {
         Route::post('admin/mesin-absensi/device/{id}/ping', [MesinAbsensiController::class, 'pingDevice'])->name('admin.mesin.device.ping');
         Route::post('admin/mesin-absensi/tarik', [MesinAbsensiController::class, 'tarikDataAll'])->name('admin.mesin.tarik');
         Route::post('admin/mesin-absensi/kirim', [MesinAbsensiController::class, 'kirimData'])->name('admin.mesin.kirim');
+        Route::post('admin/mesin-absensi/sidik-jari/tarik', [MesinAbsensiController::class, 'tarikSidikJari'])->name('admin.mesin.sidik.tarik');
+        Route::post('admin/mesin-absensi/sidik-jari/kirim', [MesinAbsensiController::class, 'kirimSidikJari'])->name('admin.mesin.sidik.kirim');
+        Route::delete('admin/mesin-absensi/sidik-jari/{id}', [MesinAbsensiController::class, 'hapusSidikJari'])->name('admin.mesin.sidik.destroy');
         Route::delete('admin/mesin-absensi/hapus/{mesin}/{pin}', [MesinAbsensiController::class, 'hapusData'])->name('admin.mesin.hapus');
         Route::post('admin/mesin-absensi/clean/{mesin}', [MesinAbsensiController::class, 'cleanUnsynced'])->name('admin.mesin.clean');
         Route::put('admin/mesin-absensi/karyawan/{id}', [MesinAbsensiController::class, 'updateKaryawan'])->name('admin.mesin.karyawan.update');
@@ -94,6 +109,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware('superadmin')->group(function () {
         Route::get('/admin/settings', [SettingController::class, 'index'])->name('settings.index');
         Route::post('/admin/settings', [SettingController::class, 'update'])->name('settings.update');
+        Route::get('/admin/perusahaan', [CompanyProfileController::class, 'index'])->name('company-profile.index');
+        Route::post('/admin/perusahaan', [CompanyProfileController::class, 'update'])->name('company-profile.update');
+        Route::get('/admin/perusahaan/kop', [CompanyProfileController::class, 'previewKop'])->name('company-profile.kop');
+        Route::delete('/admin/perusahaan/logo', [CompanyProfileController::class, 'destroyLogo'])->name('company-profile.logo.destroy');
         Route::prefix('pengaturan')->name('pengaturan.')->group(function () {
             Route::get('/', [PengaturanController::class, 'index'])->name('index');
             Route::post('/add-machine', [PengaturanController::class, 'storeMachine'])->name('machine.store');
@@ -105,7 +124,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/hapus-user', [PengaturanController::class, 'hapusUserDariMesin'])->name('hapus-user');
             Route::post('/sync-time', [PengaturanController::class, 'synchronizeDeviceTime'])->name('sync-time');
             Route::post('/restart', [PengaturanController::class, 'restartMachine'])->name('restart');
-                                });
+        });
         Route::prefix('admin/users')->name('admin.users.')->group(function () {
             Route::get('/', [UserController::class, 'index'])->name('index');
             Route::post('/store', [UserController::class, 'store'])->name('store');

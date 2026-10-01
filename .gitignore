@@ -10,6 +10,10 @@
 .env
 .env.backup
 .env.production
+.env.*
+!.env.example
+!.env.testing
+.baim_hash.backup
 Homestead.json
 Homestead.yaml
 auth.json
@@ -18,3 +22,18 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
+
+# Snapshot/backup lokal: berisi dump database (password hash, data karyawan)
+# dan arsip vendor. Jangan pernah masuk repo.
+/seluruh-pekerjaan-*
+/sebelum-tambah-pdf-*
+/storage/app/backup*
+/storage/app/backups
+/ss/
+
+# Skrip sekali pakai untuk debugging / pemulihan. Berisi path absolut dan
+# salah satunya bisa mengosongkan seluruh tabel.
+/backup-sebelum-migration.php
+/pdftest.php
+/restore.php
+/uitest.php

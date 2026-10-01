@@ -42,9 +42,9 @@ class LaporanKehadiranService
     /**
      * Susun rekap kehadiran.
      *
-     * @param  string  $mulai       Tanggal awal (Y-m-d)
-     * @param  string  $selesai     Tanggal akhir (Y-m-d)
-     * @param  array   $karyawanIds Batas ID karyawan; kosong = semua
+     * @param  string  $mulai  Tanggal awal (Y-m-d)
+     * @param  string  $selesai  Tanggal akhir (Y-m-d)
+     * @param  array  $karyawanIds  Batas ID karyawan; kosong = semua
      */
     public function rekap(string $mulai, string $selesai, array $karyawanIds = []): array
     {
@@ -54,7 +54,7 @@ class LaporanKehadiranService
         $standar = $this->getStandarJamKerja();
 
         $query = Karyawan::query()->orderByRaw('CAST(id_karyawan AS UNSIGNED) asc');
-        if (!empty($karyawanIds)) {
+        if (! empty($karyawanIds)) {
             $query->whereIn('id', $karyawanIds);
         }
         $karyawans = $query->get();
@@ -91,10 +91,6 @@ class LaporanKehadiranService
      * Menghasilkan daftar seluruh hari kerja dalam periode. Hari kerja yang
      * tidak memiliki catatan absensi ditandai sebagai "Tanpa Absensi" (Alpha),
      * sehingga selisih antara hari efektif dan hari kerja dapat terlihat.
-     *
-     * @param  int    $karyawanId
-     * @param  string $mulai
-     * @param  string $selesai
      */
     public function detail(int $karyawanId, string $mulai, string $selesai): array
     {
@@ -103,7 +99,7 @@ class LaporanKehadiranService
 
         $karyawan = Karyawan::find($karyawanId);
 
-        if (!$karyawan) {
+        if (! $karyawan) {
             return [
                 'karyawan' => null,
                 'baris' => [],
@@ -120,7 +116,7 @@ class LaporanKehadiranService
             ->where('karyawan_id', $karyawanId)
             ->whereBetween('tanggal', [$mulai->toDateString(), $selesai->toDateString()])
             ->get()
-            ->keyBy(fn($a) => Carbon::parse($a->tanggal)->toDateString());
+            ->keyBy(fn ($a) => Carbon::parse($a->tanggal)->toDateString());
 
         // Basis hari kerja efektif mengikuti seluruh karyawan agar konsisten
         // dengan rekap, bukan hanya data karyawan ini.
@@ -177,10 +173,11 @@ class LaporanKehadiranService
             $baris['status'] = 'Libur';
             $baris['kategori'] = 'secondary';
             $baris['keterangan'] = 'Hari Minggu';
+
             return $baris;
         }
 
-        if (!$att) {
+        if (! $att) {
             return $baris;
         }
 
@@ -202,11 +199,11 @@ class LaporanKehadiranService
                 $baris['menit_terlambat'] = $telat;
                 $baris['kategori'] = 'warning';
                 $baris['keterangan'] = $telat > 0
-                    ? 'Terlambat ' . $this->formatMenit($telat)
+                    ? 'Terlambat '.$this->formatMenit($telat)
                     : 'Terlambat di luar jam toleransi';
             }
 
-            if (!$baris['jam_pulang']) {
+            if (! $baris['jam_pulang']) {
                 $baris['kategori'] = 'warning';
                 $baris['keterangan'] .= ' (belum ada scan pulang)';
             }
@@ -214,7 +211,7 @@ class LaporanKehadiranService
             if ($att->lembur) {
                 $baris['lembur_jam'] = round((int) $att->lembur->lama_lembur / 60, 1);
                 $baris['kategori'] = 'warning';
-                $baris['keterangan'] .= '; lembur ' . $this->formatMenit((int) $att->lembur->lama_lembur);
+                $baris['keterangan'] .= '; lembur '.$this->formatMenit((int) $att->lembur->lama_lembur);
             }
         } else {
             $baris['kategori'] = in_array($baris['status'], ['Cuti', 'Izin', 'Sakit'], true) ? 'warning' : 'danger';
@@ -251,13 +248,13 @@ class LaporanKehadiranService
     private function formatMenit(int $menit): string
     {
         if ($menit < 60) {
-            return $menit . ' menit';
+            return $menit.' menit';
         }
 
         $jam = intdiv($menit, 60);
         $sisa = $menit % 60;
 
-        return $sisa > 0 ? $jam . ' jam ' . $sisa . ' menit' : $jam . ' jam';
+        return $sisa > 0 ? $jam.' jam '.$sisa.' menit' : $jam.' jam';
     }
 
     /**
@@ -285,6 +282,7 @@ class LaporanKehadiranService
                     'Cuti' => $cuti++,
                     default => $alpha++,
                 };
+
                 continue;
             }
 
@@ -359,29 +357,29 @@ class LaporanKehadiranService
         $kategori = 'success';
 
         if ($d['izin'] > 0) {
-            $bagian[] = 'Izin ' . $d['izin'] . ' Hari';
+            $bagian[] = 'Izin '.$d['izin'].' Hari';
             $kategori = 'warning';
         }
         if ($d['sakit'] > 0) {
-            $bagian[] = 'Sakit ' . $d['sakit'] . ' Hari';
+            $bagian[] = 'Sakit '.$d['sakit'].' Hari';
             $kategori = 'warning';
         }
         if ($d['cuti'] > 0) {
-            $bagian[] = 'Cuti ' . $d['cuti'] . ' Hari';
+            $bagian[] = 'Cuti '.$d['cuti'].' Hari';
             $kategori = 'warning';
         }
         if ($d['jumlah_terlambat'] > 0) {
-            $bagian[] = 'Terlambat ' . $d['jumlah_terlambat'] . 'x';
+            $bagian[] = 'Terlambat '.$d['jumlah_terlambat'].'x';
             $kategori = 'warning';
         }
         if ($d['total_lembur_menit'] > 0) {
             $jamLembur = round($d['total_lembur_menit'] / 60, 1);
             $satuan = floor($jamLembur) == $jamLembur ? (int) $jamLembur : $jamLembur;
-            $bagian[] = 'Lembur ' . $satuan . ' Jam';
+            $bagian[] = 'Lembur '.$satuan.' Jam';
             $kategori = 'warning';
         }
         if ($d['alpha'] > 0) {
-            $bagian[] = 'Alpha ' . $d['alpha'] . ' Hari';
+            $bagian[] = 'Alpha '.$d['alpha'].' Hari';
             $kategori = 'danger';
         }
 
@@ -414,16 +412,16 @@ class LaporanKehadiranService
         if ($jumlahTerlambat > 0) {
             if ($totalMenitTerlambat > 0) {
                 $satuan = floor($totalMenitTerlambat / 60) == round($totalMenitTerlambat / 60, 1)
-                    ? round($totalMenitTerlambat / 60, 1) . ' jam'
-                    : $totalMenitTerlambat . ' menit';
-                $catatan[] = 'Total keterlambatan ' . $satuan;
+                    ? round($totalMenitTerlambat / 60, 1).' jam'
+                    : $totalMenitTerlambat.' menit';
+                $catatan[] = 'Total keterlambatan '.$satuan;
             } else {
                 $catatan[] = 'Terlambat di luar jam toleransi';
             }
         }
 
         if ($totalLemburMenit > 0) {
-            $catatan[] = 'Lembur tercatat ' . $totalLemburMenit . ' menit';
+            $catatan[] = 'Lembur tercatat '.$totalLemburMenit.' menit';
         }
         if ($izin > 0) {
             $catatan[] = 'Izin perlu kejelasan keperluan';
@@ -432,10 +430,10 @@ class LaporanKehadiranService
             $catatan[] = 'Sakit perlu surat keterangan';
         }
         if ($cuti > 0) {
-            $catatan[] = 'Cuti sesuai jatah (' . $karyawan->jatah_cuti_tahunan . ' hari/tahun)';
+            $catatan[] = 'Cuti sesuai jatah ('.$karyawan->jatah_cuti_tahunan.' hari/tahun)';
         }
         if ($alpha > 0) {
-            $catatan[] = 'Terdeteksi ' . $alpha . ' hari tanpa keterangan';
+            $catatan[] = 'Terdeteksi '.$alpha.' hari tanpa keterangan';
         }
 
         return implode('; ', $catatan);
@@ -452,10 +450,10 @@ class LaporanKehadiranService
     private function hitungJumlahHariEfektif(Carbon $mulai, Carbon $selesai, $absensi): int
     {
         $tanggalKerja = $absensi
-            ->filter(fn($a) => in_array($a->status, ['Hadir', 'Terlambat'], true))
-            ->map(fn($a) => Carbon::parse($a->tanggal))
-            ->filter(fn($d) => $d->dayOfWeek !== Carbon::SUNDAY)
-            ->map(fn($d) => $d->toDateString())
+            ->filter(fn ($a) => in_array($a->status, ['Hadir', 'Terlambat'], true))
+            ->map(fn ($a) => Carbon::parse($a->tanggal))
+            ->filter(fn ($d) => $d->dayOfWeek !== Carbon::SUNDAY)
+            ->map(fn ($d) => $d->toDateString())
             ->unique();
 
         if ($tanggalKerja->isNotEmpty()) {
@@ -486,7 +484,7 @@ class LaporanKehadiranService
         $jabatan = ($jabatan === '' || $jabatan === '-') ? 'Staf' : $jabatan;
         $departemen = ($departemen === '' || $departemen === '-') ? 'Umum' : $departemen;
 
-        return $jabatan . ' / ' . $departemen;
+        return $jabatan.' / '.$departemen;
     }
 
     /**
@@ -535,7 +533,7 @@ class LaporanKehadiranService
         $value = (string) $value;
 
         if (strlen($value) === 5) {
-            return $value . ':00';
+            return $value.':00';
         }
 
         return substr($value, 0, 8);

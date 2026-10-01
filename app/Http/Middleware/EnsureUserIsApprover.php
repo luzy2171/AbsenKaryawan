@@ -15,7 +15,7 @@ class EnsureUserIsApprover
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check() || !Auth::user()->isApprover()) {
+        if (! Auth::check() || ! Auth::user()->isApprover()) {
             abort(403, 'Akses ditolak. Hanya Approval yang dapat mengakses halaman ini.');
         }
 

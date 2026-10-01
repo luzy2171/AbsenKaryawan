@@ -12,8 +12,8 @@ class CutiControlController extends Controller
         $query = Karyawan::query();
 
         if ($request->filled('search')) {
-            $query->where('nama', 'like', '%' . $request->search . '%')
-                  ->orWhere('id_karyawan', 'like', '%' . $request->search . '%');
+            $query->where('nama', 'like', '%'.$request->search.'%')
+                ->orWhere('id_karyawan', 'like', '%'.$request->search.'%');
         }
 
         $karyawans = $query->orderBy('nama', 'asc')->paginate(10);
@@ -24,7 +24,7 @@ class CutiControlController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'jatah_cuti_tahunan' => 'required|numeric|min:0'
+            'jatah_cuti_tahunan' => 'required|numeric|min:0',
         ]);
 
         $karyawan = Karyawan::findOrFail($id);

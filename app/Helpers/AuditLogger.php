@@ -44,7 +44,7 @@ class AuditLogger
     public static function logout()
     {
         $userName = auth()->user() ? auth()->user()->name : 'System';
-        AuditLog::log('logout', 'auth', $userName . " melakukan logout");
+        AuditLog::log('logout', 'auth', $userName.' melakukan logout');
     }
 
     /**
@@ -91,7 +91,7 @@ class AuditLogger
 
     public static function autoPullToggled($status)
     {
-        AuditLog::log('toggle', 'absensi', "Mengubah auto-pull menjadi: " . ($status ? 'AKTIF' : 'NONAKTIF'));
+        AuditLog::log('toggle', 'absensi', 'Mengubah auto-pull menjadi: '.($status ? 'AKTIF' : 'NONAKTIF'));
     }
 
     /**
@@ -102,7 +102,7 @@ class AuditLogger
         AuditLog::log(
             'update',
             'settings',
-            "Mengubah pengaturan jam kerja dan parameter aplikasi",
+            'Mengubah pengaturan jam kerja dan parameter aplikasi',
             $oldSettings,
             $newSettings
         );
@@ -113,17 +113,17 @@ class AuditLogger
      */
     public static function machineClearLog()
     {
-        AuditLog::log('clear_log', 'machine', "Membersihkan log transaksi mesin absensi");
+        AuditLog::log('clear_log', 'machine', 'Membersihkan log transaksi mesin absensi');
     }
 
     public static function machineSync()
     {
-        AuditLog::log('sync_time', 'machine', "Sinkronisasi waktu mesin dengan server");
+        AuditLog::log('sync_time', 'machine', 'Sinkronisasi waktu mesin dengan server');
     }
 
     public static function machineRestart()
     {
-        AuditLog::log('restart', 'machine', "Merestart mesin absensi fisik");
+        AuditLog::log('restart', 'machine', 'Merestart mesin absensi fisik');
     }
 
     public static function machineUserDeleted($userId)

@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use App\Helpers\CompanyProfile;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,5 +23,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Paginator::useBootstrapFive();
+
+        // Identitas perusahaan (nama PT + logo) tersedia di semua view,
+        // termasuk template cetak PDF yang tidak lewat middleware auth.
+        View::composer('*', function ($view) {
+            $view->with('companyProfile', new CompanyProfile);
+        });
     }
 }

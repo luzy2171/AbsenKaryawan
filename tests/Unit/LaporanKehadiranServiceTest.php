@@ -17,7 +17,7 @@ class LaporanKehadiranServiceTest extends TestCase
 {
     private function invoke(string $method, array $args)
     {
-        $service = new LaporanKehadiranService();
+        $service = new LaporanKehadiranService;
         $reflection = new ReflectionMethod($service, $method);
         $reflection->setAccessible(true);
 
@@ -118,7 +118,7 @@ class LaporanKehadiranServiceTest extends TestCase
         $jumlah = $this->invoke('hitungJumlahHariEfektif', [
             Carbon::parse('2026-09-01'),
             Carbon::parse('2026-09-07'),
-            new Collection(),
+            new Collection,
         ]);
 
         // 1-7 September 2026: Senin-Sabtu = 6 hari kerja

@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Services\SolutionX100CService;
+use App\Models\Fingerprint;
 use App\Models\Karyawan;
 use App\Models\MachineStatus;
 use App\Services\SolutionSoapService;
+use App\Services\SolutionX100CService;
+use Illuminate\Http\Request;
 
 class MesinAbsensiController extends Controller
 {
@@ -20,7 +21,16 @@ class MesinAbsensiController extends Controller
             $service = $this->serviceForMachine($machine, $zkService, $soapService);
             $machineUsers = $service->getAllUsers();
             $machine->updateStatus($service->wasLastConnectionSuccessful());
-            $usersByMachine[$machine->id] = array_column($machineUsers, 'pin');
+            // Sinkronisasi dicocokkan ke id_karyawan, yang di mesin muncul sebagai
+            // <PIN2> pada log absensi. <PIN> dipakai juga karena sebagian mesin
+            // memakai PIN == PIN2.
+            $usersByMachine[$machine->id] = array_values(array_unique(array_filter(
+                array_merge(
+                    array_column($machineUsers, 'pin'),
+                    array_column($machineUsers, 'pin2')
+                ),
+                static fn ($v) => $v !== '' && $v !== null
+            )));
 
             foreach ($machineUsers as $user) {
                 $user['machine_id'] = $machine->id;
@@ -30,8 +40,11 @@ class MesinAbsensiController extends Controller
         }
 
         $karyawans = Karyawan::orderBy('id_karyawan')->get();
+        $fingerprints = Fingerprint::with(['karyawan', 'machine'])
+            ->orderByDesc('updated_at')
+            ->get();
 
-        return view('admin.mesin.index', compact('machines', 'usersSol', 'usersByMachine', 'karyawans'));
+        return view('admin.mesin.index', compact('machines', 'usersSol', 'usersByMachine', 'karyawans', 'fingerprints'));
     }
 
     public function tarikDataAll(Request $request, SolutionX100CService $zkService, SolutionSoapService $soapService)
@@ -47,14 +60,18 @@ class MesinAbsensiController extends Controller
 
         $berhasil = 0;
         foreach ($users as $user) {
-            if (empty($user['pin'])) {
+            // Id user yang muncul di log absensi = <PIN2>. Fallback ke <PIN>
+            // untuk mesin yang memakai PIN == PIN2.
+            $idUser = trim((string) ($user['pin2'] ?? '')) ?: trim((string) ($user['pin'] ?? ''));
+
+            if ($idUser === '') {
                 continue;
             }
 
-            if (!Karyawan::where('id_karyawan', $user['pin'])->exists()) {
+            if (! Karyawan::where('id_karyawan', $idUser)->exists()) {
                 Karyawan::create([
-                    'id_karyawan' => $user['pin'],
-                    'nama' => $user['name'] ?: 'User ' . $user['pin'],
+                    'id_karyawan' => $idUser,
+                    'nama' => $user['name'] ?: 'User '.$idUser,
                     'status' => 'Aktif',
                 ]);
                 $berhasil++;
@@ -64,24 +81,213 @@ class MesinAbsensiController extends Controller
         return back()->with('status', "Berhasil menarik {$berhasil} data pengguna baru dari {$machine->machine_name} ke database lokal.");
     }
 
+    /**
+     * Kirim satu atau banyak karyawan ke mesin sekaligus.
+     */
     public function kirimData(Request $request, SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
         $request->validate([
-            'karyawan_id' => 'required|integer|exists:karyawans,id',
+            'karyawan_id' => ['required', 'array', 'min:1'],
+            'karyawan_id.*' => ['integer', 'exists:karyawans,id'],
             'machine_id' => 'required|integer|exists:machine_status,id',
         ]);
 
-        $karyawan = Karyawan::findOrFail($request->integer('karyawan_id'));
+        $ids = array_values(array_unique(array_map('intval', $request->input('karyawan_id'))));
+        $karyawans = Karyawan::whereIn('id', $ids)->orderBy('nama')->get();
+
         $machine = $this->solutionMachine($request->integer('machine_id'));
         $service = $this->serviceForMachine($machine, $zkService, $soapService);
-        $result = $service->uploadNama($karyawan->id_karyawan, $karyawan->nama);
+
+        $berhasil = [];
+        $gagal = [];
+
+        foreach ($karyawans as $karyawan) {
+            $result = $service->uploadNama($karyawan->id_karyawan, $karyawan->nama);
+
+            if ($result === 'Sukses') {
+                $berhasil[] = $karyawan->nama;
+            } else {
+                $gagal[] = $karyawan->nama.' ('.$result.')';
+            }
+        }
+
+        $machine->updateStatus($service->wasLastConnectionSuccessful());
+
+        $pesan = [];
+        if ($berhasil !== []) {
+            $pesan[] = count($berhasil).' karyawan berhasil dikirim ke '.$machine->machine_name.': '
+                .implode(', ', $berhasil);
+        }
+        if ($gagal !== []) {
+            $pesan[] = count($gagal).' gagal: '.implode(', ', $gagal);
+        }
+
+        return back()->with($gagal === [] ? 'status' : 'error', implode(' | ', $pesan));
+    }
+
+    /**
+     * Tarik template sidik jari dari mesin ke database lokal.
+     *
+     * Pengguna cukup mendaftarkan sidik jarinya langsung di mesin; aplikasi ini
+     * menarik template-nya lewat SOAP GetUserTemplate.
+     */
+    public function tarikSidikJari(Request $request, SolutionX100CService $zkService, SolutionSoapService $soapService)
+    {
+        $request->validate([
+            'machine_id' => 'required|integer|exists:machine_status,id',
+            'karyawan_id' => 'required|integer|exists:karyawans,id',
+        ]);
+
+        $machine = $this->solutionMachine($request->integer('machine_id'));
+        $karyawan = Karyawan::findOrFail($request->integer('karyawan_id'));
+
+        $service = $this->serviceForMachine($machine, $zkService, $soapService);
+
+        if (! $service instanceof SolutionSoapService) {
+            return back()->with('error', 'Tarik sidik jari hanya bisa untuk mesin bertipe Solution (SOAP).');
+        }
+
+        $templates = $service->getUserTemplates($karyawan->id_karyawan);
+        $machine->updateStatus($service->wasLastConnectionSuccessful());
+
+        if ($templates === []) {
+            Fingerprint::where('karyawan_id', $karyawan->id)
+                ->where('machine_id', $machine->id)
+                ->delete();
+
+            return back()->with('error', "Tidak ada sidik jari terdaftar di mesin untuk {$karyawan->nama} (PIN: {$karyawan->id_karyawan}).");
+        }
+
+        $tersimpan = [];
+        foreach ($templates as $t) {
+            $templateAsli = base64_decode($t['template'], true);
+            if ($templateAsli === false) {
+                continue;
+            }
+
+            Fingerprint::updateOrCreate(
+                [
+                    'machine_id' => $machine->id,
+                    'karyawan_id' => $karyawan->id,
+                    'finger_id' => $t['finger_id'],
+                ],
+                [
+                    'template' => $t['template'],
+                    'size' => strlen($templateAsli),
+                ]
+            );
+
+            $tersimpan[] = $t['finger_id'];
+        }
+
+        return back()->with('status', count($tersimpan).' sidik jari ditarik dari mesin untuk '
+            ."{$karyawan->nama} (jari slot: ".implode(', ', $tersimpan).').');
+    }
+
+    /**
+     * Kirim template sidik jari ke mesin (SOAP SetUserTemplate + RefreshDB).
+     *
+     * Template dibaca dari file hasil export software PC mesin. File boleh berupa
+     * base64 (teks) atau biner mentah - keduanya dinormalkan ke base64 karena
+     * itulah format yang dipakai mesin di dalam XML.
+     */
+    public function kirimSidikJari(Request $request, SolutionX100CService $zkService, SolutionSoapService $soapService)
+    {
+        $data = $request->validate([
+            'machine_id' => 'required|integer|exists:machine_status,id',
+            'karyawan_id' => 'required|integer|exists:karyawans,id',
+            'finger_id' => 'required|integer|min:0|max:9',
+            'template' => 'required|file|max:8',
+        ]);
+
+        $machine = $this->solutionMachine((int) $data['machine_id']);
+        $karyawan = Karyawan::findOrFail((int) $data['karyawan_id']);
+
+        $service = $this->serviceForMachine($machine, $zkService, $soapService);
+        if (! $service instanceof SolutionSoapService) {
+            return back()->with('error', 'Kirim sidik jari hanya bisa untuk mesin bertipe Solution (SOAP).');
+        }
+
+        $template = $this->normalisasiTemplateBase64($request->file('template')->get());
+
+        if ($template === null) {
+            return back()->with('error', 'File template tidak bisa dibaca sebagai data sidik jari (harus base64 atau biner).');
+        }
+
+        if (strlen($template) > 8192) {
+            return back()->with('error', 'Template terlalu besar ('.number_format(strlen($template))
+                .' karakter). Maksimal 8192 karakter base64.');
+        }
+
+        $result = $service->setUserTemplate($karyawan->id_karyawan, (int) $data['finger_id'], $template);
         $machine->updateStatus($service->wasLastConnectionSuccessful());
 
         if ($result !== 'Sukses') {
-            return back()->with('error', "Gagal mengirim {$karyawan->nama} ke {$machine->machine_name}.");
+            return back()->with('error', "Gagal mengirim sidik jari ke {$machine->machine_name}: {$result}");
         }
 
-        return back()->with('status', "{$karyawan->nama} (PIN: {$karyawan->id_karyawan}) berhasil dikirim ke {$machine->machine_name}.");
+        Fingerprint::updateOrCreate(
+            [
+                'machine_id' => $machine->id,
+                'karyawan_id' => $karyawan->id,
+                'finger_id' => (int) $data['finger_id'],
+            ],
+            [
+                'template' => $template,
+                'size' => strlen((string) base64_decode($template, true)),
+            ]
+        );
+
+        $jari = (new Fingerprint(['finger_id' => (int) $data['finger_id']]))->namaJari();
+
+        return back()->with('status', "Sidik jari ({$jari}) untuk {$karyawan->nama} berhasil dikirim ke {$machine->machine_name}.");
+    }
+
+    /**
+     * Ubah isi file menjadi base64 yang valid untuk dikirim ke mesin.
+     *
+     * File hasil export bisa berupa teks base64 atau biner mentah. Biner mentah
+     * dibungkus dengan base64_encode; kalau teks sudah base64, dipakai apa adanya.
+     *
+     * Penting: file biner sama sekali TIDAK boleh di-trim, karena byte spasi /
+     * newline di ujung adalah bagian dari template dan memotongnya membuat
+     * sidik jari tidak terbaca mesin.
+     */
+    private function normalisasiTemplateBase64(string $isi): ?string
+    {
+        if ($isi === '') {
+            return null;
+        }
+
+        // Cek apakah isinya teks base64: coerce dulu ke string aman.
+        $teks = trim($isi);
+        $rapikan = $teks === '' ? '' : (preg_replace('/\s+/', '', $teks) ?? '');
+
+        if ($rapikan !== ''
+            && preg_match('#^[A-Za-z0-9+/]+={0,2}$#', $rapikan) === 1
+            && strlen($rapikan) % 4 === 0) {
+            $decode = base64_decode($rapikan, true);
+            if ($decode !== false && $decode !== '') {
+                return $rapikan;
+            }
+        }
+
+        // Biner mentah -> base64. Isi file dipakai apa adanya, tanpa trim.
+        return base64_encode($isi);
+    }
+
+    /**
+     * Hapus template sidik jari dari database lokal.
+     */
+    public function hapusSidikJari(Request $request, $id)
+    {
+        $fingerprint = Fingerprint::findOrFail($id);
+        $nama = optional($fingerprint->karyawan)->nama ?? 'Karyawan';
+        $jari = $fingerprint->namaJari();
+
+        $fingerprint->delete();
+
+        return back()->with('status', "Sidik jari {$jari} untuk {$nama} dihapus dari database lokal (di mesin tidak berubah).");
     }
 
     public function hapusData($mesin, $pin, SolutionX100CService $zkService, SolutionSoapService $soapService)
@@ -136,7 +342,7 @@ class MesinAbsensiController extends Controller
         $failedCount = 0;
 
         foreach ($users as $user) {
-            if (!in_array((string) $user['pin'], $localKaryawans, true)) {
+            if (! in_array((string) $user['pin'], $localKaryawans, true)) {
                 $result = $service->hapusUser($user['pin']);
                 if ($result === 'Sukses') {
                     $deletedCount++;
@@ -184,7 +390,7 @@ class MesinAbsensiController extends Controller
         $machine = MachineStatus::findOrFail($id);
 
         $validated = $request->validate([
-            'machine_ip' => 'required|ip|unique:machine_status,machine_ip,' . $machine->id,
+            'machine_ip' => 'required|ip|unique:machine_status,machine_ip,'.$machine->id,
             'machine_name' => 'required|string|max:255',
             'machine_type' => 'required|in:solution,x100c',
             'port' => 'required|integer|min:1|max:65535',
@@ -258,6 +464,7 @@ class MesinAbsensiController extends Controller
 
         $machine = MachineStatus::defaultForType('solution');
         abort_unless($machine, 404, 'Mesin Solution tidak ditemukan.');
+
         return $machine;
     }
 
@@ -273,10 +480,12 @@ class MesinAbsensiController extends Controller
                 (int) env('SOLUTION_SOAP_PORT', 80),
                 $machine->username
             );
+
             return $soapService;
         }
 
         $zkService->setConnection($machine->machine_ip, $machine->port ?? 4370);
+
         return $zkService;
     }
 

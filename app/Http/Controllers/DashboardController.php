@@ -2,16 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Karyawan;
+use App\Helpers\AuditLogger;
 use App\Models\Attendance;
+use App\Models\Karyawan;
 use App\Models\MachineStatus;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
-
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
-use App\Helpers\AuditLogger;
 
 class DashboardController extends Controller
 {
@@ -20,9 +18,9 @@ class DashboardController extends Controller
         $user = auth()->user();
 
         $request->validate([
-            'name'     => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user->id)],
-            'email'    => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'password' => 'nullable|string|min:6',
         ]);
 
@@ -32,9 +30,9 @@ class DashboardController extends Controller
             'role' => $user->role,
         ];
 
-        $user->name     = $request->name;
+        $user->name = $request->name;
         $user->username = $request->username;
-        $user->email    = $request->email;
+        $user->email = $request->email;
 
         if ($request->filled('password')) {
             $user->password = Hash::make($request->password);
@@ -56,24 +54,24 @@ class DashboardController extends Controller
         $totalKaryawan = Karyawan::where('status', 'Aktif')->count();
 
         // PENTING: Menghitung keterlambatan hari ini
-        $terlambat     = Attendance::where('tanggal', $hariIni)->where('status', 'Terlambat')->count();
+        $terlambat = Attendance::where('tanggal', $hariIni)->where('status', 'Terlambat')->count();
 
         // PERBAIKAN: "Hadir Hari Ini" sekarang menghitung yang 'Hadir' (Tepat Waktu) DAN yang 'Terlambat'
         // Agar counter kotak hijau di dashboard tidak bernilai 0 saat semua orang terlambat
-        $hadirHariIni  = Attendance::where('tanggal', $hariIni)
-                            ->whereIn('status', ['Hadir', 'Terlambat'])
-                            ->count();
+        $hadirHariIni = Attendance::where('tanggal', $hariIni)
+            ->whereIn('status', ['Hadir', 'Terlambat'])
+            ->count();
 
         // Karyawan tidak hadir (Alpha) adalah total karyawan dikurangi yang sudah melakukan tap masuk hari ini
-        $tidakHadir    = $totalKaryawan - $hadirHariIni;
-        $tidakHadir    = $tidakHadir < 0 ? 0 : $tidakHadir; // Mencegah nilai minus jika ada error data
+        $tidakHadir = $totalKaryawan - $hadirHariIni;
+        $tidakHadir = $tidakHadir < 0 ? 0 : $tidakHadir; // Mencegah nilai minus jika ada error data
 
         // 2. Mengambil 5 data absensi terbaru hari ini untuk tabel "Absensi Terbaru"
         $absensiTerbaru = Attendance::with('karyawan')
-                            ->where('tanggal', $hariIni)
-                            ->orderBy('jam_masuk', 'desc')
-                            ->take(5)
-                            ->get();
+            ->where('tanggal', $hariIni)
+            ->orderBy('jam_masuk', 'desc')
+            ->take(5)
+            ->get();
 
         // 3. Data untuk Grafik Tren Kehadiran Mingguan (7 hari terakhir)
         $trendMingguan = $this->getTrendMingguan();
@@ -86,10 +84,10 @@ class DashboardController extends Controller
 
         // Mengirimkan semua data ke view 'dashboard'
         return view('dashboard', compact(
-            'totalKaryawan', 
-            'hadirHariIni', 
-            'terlambat', 
-            'tidakHadir', 
+            'totalKaryawan',
+            'hadirHariIni',
+            'terlambat',
+            'tidakHadir',
             'absensiTerbaru',
             'trendMingguan',
             'trendBulanan',
@@ -110,20 +108,20 @@ class DashboardController extends Controller
         for ($i = 6; $i >= 0; $i--) {
             $tanggal = Carbon::today()->subDays($i);
             $labels[] = $tanggal->format('D'); // Mon, Tue, Wed, etc
-            
+
             $totalKaryawan = Karyawan::where('status', 'Aktif')->count();
-            
+
             $hadirCount = Attendance::where('tanggal', $tanggal->toDateString())
                 ->where('status', 'Hadir')
                 ->count();
-            
+
             $terlambatCount = Attendance::where('tanggal', $tanggal->toDateString())
                 ->where('status', 'Terlambat')
                 ->count();
-            
+
             $alphaCount = $totalKaryawan - ($hadirCount + $terlambatCount);
             $alphaCount = $alphaCount < 0 ? 0 : $alphaCount;
-            
+
             $hadir[] = $hadirCount;
             $terlambat[] = $terlambatCount;
             $alpha[] = $alphaCount;
@@ -149,15 +147,15 @@ class DashboardController extends Controller
         for ($i = 29; $i >= 0; $i--) {
             $tanggal = Carbon::today()->subDays($i);
             $labels[] = $tanggal->format('d/m'); // 01/09, 02/09, etc
-            
+
             $hadirCount = Attendance::where('tanggal', $tanggal->toDateString())
                 ->where('status', 'Hadir')
                 ->count();
-            
+
             $terlambatCount = Attendance::where('tanggal', $tanggal->toDateString())
                 ->where('status', 'Terlambat')
                 ->count();
-            
+
             $hadir[] = $hadirCount;
             $terlambat[] = $terlambatCount;
         }
@@ -179,8 +177,8 @@ class DashboardController extends Controller
         $totalKaryawan = Karyawan::where('status', 'Aktif')->count();
         $terlambat = Attendance::where('tanggal', $hariIni)->where('status', 'Terlambat')->count();
         $hadirHariIni = Attendance::where('tanggal', $hariIni)
-                            ->whereIn('status', ['Hadir', 'Terlambat'])
-                            ->count();
+            ->whereIn('status', ['Hadir', 'Terlambat'])
+            ->count();
         $tidakHadir = $totalKaryawan - $hadirHariIni;
         $tidakHadir = $tidakHadir < 0 ? 0 : $tidakHadir;
 

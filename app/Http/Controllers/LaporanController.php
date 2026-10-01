@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\AuditLogger;
+use App\Helpers\CompanyProfile;
 use App\Models\Karyawan;
 use App\Services\LaporanKehadiranService;
 use Carbon\Carbon;
@@ -10,9 +11,7 @@ use Illuminate\Http\Request;
 
 class LaporanController extends Controller
 {
-    public function __construct(private LaporanKehadiranService $layanan)
-    {
-    }
+    public function __construct(private LaporanKehadiranService $layanan) {}
 
     /**
      * Normalisasi parameter karyawan_id dari form.
@@ -99,13 +98,13 @@ class LaporanController extends Controller
         $periode = $this->tentukanPeriode($request);
         $namaPeriode = Carbon::parse($mulai)->format('F Y');
 
-        $filename = 'Laporan_Kehadiran_Jam_Kerja_' . $namaPeriode . '.xls';
+        $filename = 'Laporan_Kehadiran_Jam_Kerja_'.$namaPeriode.'.xls';
 
         $html = $this->susunExcel($rekap, $periode, $namaPeriode);
 
         return response($html, 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=utf-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             'Cache-Control' => 'max-age=0',
         ]);
     }
@@ -173,11 +172,11 @@ class LaporanController extends Controller
 
         AuditLogger::absensiExported('Excel Rincian Karyawan', count($detail['baris']));
 
-        $filename = 'Rincian_Karyawan_' . $detail['karyawan']->id_karyawan . '_' . $periode['periode_label'] . '.xls';
+        $filename = 'Rincian_Karyawan_'.$detail['karyawan']->id_karyawan.'_'.$periode['periode_label'].'.xls';
 
         return response($this->susunExcelDetail($detail, $periode), 200, [
             'Content-Type' => 'application/vnd.ms-excel; charset=utf-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
             'Cache-Control' => 'max-age=0',
         ]);
     }
@@ -188,7 +187,7 @@ class LaporanController extends Controller
     private function hitungRingkasanDetail(array $baris): array
     {
         $hitung = function ($status) use ($baris) {
-            return count(array_filter($baris, fn($b) => $b['status'] === $status));
+            return count(array_filter($baris, fn ($b) => $b['status'] === $status));
         };
 
         $totalMenit = 0;
@@ -239,59 +238,59 @@ class LaporanController extends Controller
         $html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
         $html .= '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
         $html .= '<style>'
-            . 'body{font-family:Calibri,Arial,sans-serif;font-size:10pt;}'
-            . '.judul{font-size:14pt;font-weight:bold;color:#1f4e79;}'
-            . '.sub{font-size:10pt;color:#404040;}'
-            . 'table{border-collapse:collapse;}'
-            . 'th{background:#1f4e79;color:#fff;font-weight:bold;border:0.75pt solid #1f4e79;padding:5px;}'
-            . 'td{border:0.75pt solid #8ea9db;padding:4px;}'
-            . '.total{background:#d9e1f2;font-weight:bold;border:0.75pt solid #1f4e79;}'
-            . '</style></head><body>';
+            .'body{font-family:Calibri,Arial,sans-serif;font-size:10pt;}'
+            .'.judul{font-size:14pt;font-weight:bold;color:#1f4e79;}'
+            .'.sub{font-size:10pt;color:#404040;}'
+            .'table{border-collapse:collapse;}'
+            .'th{background:#1f4e79;color:#fff;font-weight:bold;border:0.75pt solid #1f4e79;padding:5px;}'
+            .'td{border:0.75pt solid #8ea9db;padding:4px;}'
+            .'.total{background:#d9e1f2;font-weight:bold;border:0.75pt solid #1f4e79;}'
+            .'</style></head><body>';
 
         $html .= '<table><tr><td colspan="9" class="judul">RINCIAN KEHADIRAN &amp; JAM KERJA KARYAWAN</td></tr>';
-        $html .= '<tr><td colspan="9" class="sub">PT. Kawan Solution</td></tr>';
-        $html .= '<tr><td colspan="9" class="sub">ID Karyawan: ' . htmlspecialchars((string) $karyawan->id_karyawan) . ' &nbsp;|&nbsp; Nama: ' . htmlspecialchars($karyawan->nama) . ' &nbsp;|&nbsp; Jabatan: ' . htmlspecialchars($this->jabatanLengkap($karyawan)) . '</td></tr>';
-        $html .= '<tr><td colspan="9" class="sub">Periode: ' . htmlspecialchars($periode['periode_label']) . ' (' . date('d/m/Y', strtotime($periode['mulai'])) . ' - ' . date('d/m/Y', strtotime($periode['selesai'])) . ')</td></tr>';
+        $html .= '<tr><td colspan="9" class="sub">'.htmlspecialchars(CompanyProfile::nama()).'</td></tr>';
+        $html .= '<tr><td colspan="9" class="sub">ID Karyawan: '.htmlspecialchars((string) $karyawan->id_karyawan).' &nbsp;|&nbsp; Nama: '.htmlspecialchars($karyawan->nama).' &nbsp;|&nbsp; Jabatan: '.htmlspecialchars($this->jabatanLengkap($karyawan)).'</td></tr>';
+        $html .= '<tr><td colspan="9" class="sub">Periode: '.htmlspecialchars($periode['periode_label']).' ('.date('d/m/Y', strtotime($periode['mulai'])).' - '.date('d/m/Y', strtotime($periode['selesai'])).')</td></tr>';
         $html .= '<tr><td colspan="9"></td></tr>';
 
         $html .= '<tr>'
-            . '<th width="30">No</th>'
-            . '<th width="90">Tanggal</th>'
-            . '<th width="70">Hari</th>'
-            . '<th width="80">Jam Masuk</th>'
-            . '<th width="80">Jam Pulang</th>'
-            . '<th width="80">Durasi (Jam)</th>'
-            . '<th width="70">Lembur (Jam)</th>'
-            . '<th width="100">Status</th>'
-            . '<th width="220">Keterangan</th>'
-            . '</tr>';
+            .'<th width="30">No</th>'
+            .'<th width="90">Tanggal</th>'
+            .'<th width="70">Hari</th>'
+            .'<th width="80">Jam Masuk</th>'
+            .'<th width="80">Jam Pulang</th>'
+            .'<th width="80">Durasi (Jam)</th>'
+            .'<th width="70">Lembur (Jam)</th>'
+            .'<th width="100">Status</th>'
+            .'<th width="220">Keterangan</th>'
+            .'</tr>';
 
         foreach ($baris as $index => $b) {
             $html .= '<tr>'
-                . '<td align="center">' . ($index + 1) . '</td>'
-                . '<td align="center">' . htmlspecialchars($b['tanggal_label']) . '</td>'
-                . '<td align="center">' . htmlspecialchars($b['nama_hari']) . '</td>'
-                . '<td align="center">' . ($b['jam_masuk'] ? substr($b['jam_masuk'], 0, 5) : '-') . '</td>'
-                . '<td align="center">' . ($b['jam_pulang'] ? substr($b['jam_pulang'], 0, 5) : '-') . '</td>'
-                . '<td align="center" x:num="' . $b['durasi_jam'] . '">' . number_format($b['durasi_jam'], 1, ',', '') . '</td>'
-                . '<td align="center" x:num="' . $b['lembur_jam'] . '">' . number_format($b['lembur_jam'], 1, ',', '') . '</td>'
-                . '<td align="center" style="background:' . $warnaBaris($b['kategori']) . '">' . htmlspecialchars($b['status']) . '</td>'
-                . '<td>' . htmlspecialchars($b['keterangan']) . '</td>'
-                . '</tr>';
+                .'<td align="center">'.($index + 1).'</td>'
+                .'<td align="center">'.htmlspecialchars($b['tanggal_label']).'</td>'
+                .'<td align="center">'.htmlspecialchars($b['nama_hari']).'</td>'
+                .'<td align="center">'.($b['jam_masuk'] ? substr($b['jam_masuk'], 0, 5) : '-').'</td>'
+                .'<td align="center">'.($b['jam_pulang'] ? substr($b['jam_pulang'], 0, 5) : '-').'</td>'
+                .'<td align="center" x:num="'.$b['durasi_jam'].'">'.number_format($b['durasi_jam'], 1, ',', '').'</td>'
+                .'<td align="center" x:num="'.$b['lembur_jam'].'">'.number_format($b['lembur_jam'], 1, ',', '').'</td>'
+                .'<td align="center" style="background:'.$warnaBaris($b['kategori']).'">'.htmlspecialchars($b['status']).'</td>'
+                .'<td>'.htmlspecialchars($b['keterangan']).'</td>'
+                .'</tr>';
         }
 
         if ($baris) {
             $html .= '<tr class="total">'
-                . '<td align="center">TOTAL</td>'
-                . '<td align="center">' . count($baris) . ' hari</td>'
-                . '<td align="center"></td>'
-                . '<td align="center"></td>'
-                . '<td align="center"></td>'
-                . '<td align="center" x:num="=SUM(F2:F' . $barisTerakhir . ')">' . number_format($ringkasan['total_jam_kerja'], 1, ',', '') . '</td>'
-                . '<td align="center" x:num="=SUM(G2:G' . $barisTerakhir . ')">' . number_format($ringkasan['total_lembur_jam'], 1, ',', '') . '</td>'
-                . '<td align="center">Hadir ' . $ringkasan['hadir'] . ' / Telat ' . $ringkasan['terlambat'] . '</td>'
-                . '<td align="center">Rata-rata ' . number_format($ringkasan['rata_rata_jam'], 1, ',', '') . ' jam/hari</td>'
-                . '</tr>';
+                .'<td align="center">TOTAL</td>'
+                .'<td align="center">'.count($baris).' hari</td>'
+                .'<td align="center"></td>'
+                .'<td align="center"></td>'
+                .'<td align="center"></td>'
+                .'<td align="center" x:num="=SUM(F2:F'.$barisTerakhir.')">'.number_format($ringkasan['total_jam_kerja'], 1, ',', '').'</td>'
+                .'<td align="center" x:num="=SUM(G2:G'.$barisTerakhir.')">'.number_format($ringkasan['total_lembur_jam'], 1, ',', '').'</td>'
+                .'<td align="center">Hadir '.$ringkasan['hadir'].' / Telat '.$ringkasan['terlambat'].'</td>'
+                .'<td align="center">Rata-rata '.number_format($ringkasan['rata_rata_jam'], 1, ',', '').' jam/hari</td>'
+                .'</tr>';
         }
 
         $html .= '</table></body></html>';
@@ -310,7 +309,7 @@ class LaporanController extends Controller
         $jabatan = ($jabatan === '' || $jabatan === '-') ? 'Staf' : $jabatan;
         $departemen = ($departemen === '' || $departemen === '-') ? 'Umum' : $departemen;
 
-        return $jabatan . ' / ' . $departemen;
+        return $jabatan.' / '.$departemen;
     }
 
     /**
@@ -390,59 +389,59 @@ class LaporanController extends Controller
         $html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
         $html .= '<head><meta http-equiv="Content-Type" content="text/html; charset=utf-8" />';
         $html .= '<style>'
-            . 'body{font-family:Calibri,Arial,sans-serif;font-size:10pt;}'
-            . '.judul{font-size:14pt;font-weight:bold;color:#1f4e79;}'
-            . '.sub{font-size:10pt;color:#404040;}'
-            . 'table{border-collapse:collapse;}'
-            . 'th{background:#1f4e79;color:#fff;font-weight:bold;border:0.75pt solid #1f4e79;padding:5px;}'
-            . 'td{border:0.75pt solid #8ea9db;padding:4px;}'
-            . 'total{background:#d9e1f2;font-weight:bold;border:0.75pt solid #1f4e79;}'
-            . '</style></head><body>';
+            .'body{font-family:Calibri,Arial,sans-serif;font-size:10pt;}'
+            .'.judul{font-size:14pt;font-weight:bold;color:#1f4e79;}'
+            .'.sub{font-size:10pt;color:#404040;}'
+            .'table{border-collapse:collapse;}'
+            .'th{background:#1f4e79;color:#fff;font-weight:bold;border:0.75pt solid #1f4e79;padding:5px;}'
+            .'td{border:0.75pt solid #8ea9db;padding:4px;}'
+            .'total{background:#d9e1f2;font-weight:bold;border:0.75pt solid #1f4e79;}'
+            .'</style></head><body>';
 
         $html .= '<table><tr><td colspan="9" class="judul">LAPORAN KEHADIRAN &amp; JAM KERJA KARYAWAN</td></tr>';
-        $html .= '<tr><td colspan="9" class="sub">PT. Kawan Solution</td></tr>';
-        $html .= '<tr><td colspan="9" class="sub">Periode: ' . htmlspecialchars($namaPeriode) . ' (' . date('d/m/Y', strtotime($periode['mulai'])) . ' - ' . date('d/m/Y', strtotime($periode['selesai'])) . ')</td></tr>';
+        $html .= '<tr><td colspan="9" class="sub">'.htmlspecialchars(CompanyProfile::nama()).'</td></tr>';
+        $html .= '<tr><td colspan="9" class="sub">Periode: '.htmlspecialchars($namaPeriode).' ('.date('d/m/Y', strtotime($periode['mulai'])).' - '.date('d/m/Y', strtotime($periode['selesai'])).')</td></tr>';
         $html .= '<tr><td colspan="9"></td></tr>';
 
         $html .= '<tr>'
-            . '<th width="30">No</th>'
-            . '<th width="90">ID Karyawan</th>'
-            . '<th width="180">Nama Karyawan</th>'
-            . '<th width="150">Jabatan / Divisi</th>'
-            . '<th width="80">Total Hari Kerja (Hari)</th>'
-            . '<th width="80">Total Jam Kerja (Jam)</th>'
-            . '<th width="80">Rata-rata Jam/Hari</th>'
-            . '<th width="150">Riport Masuk</th>'
-            . '<th width="220">Catatan Operasional</th>'
-            . '</tr>';
+            .'<th width="30">No</th>'
+            .'<th width="90">ID Karyawan</th>'
+            .'<th width="180">Nama Karyawan</th>'
+            .'<th width="150">Jabatan / Divisi</th>'
+            .'<th width="80">Total Hari Kerja (Hari)</th>'
+            .'<th width="80">Total Jam Kerja (Jam)</th>'
+            .'<th width="80">Rata-rata Jam/Hari</th>'
+            .'<th width="150">Riport Masuk</th>'
+            .'<th width="220">Catatan Operasional</th>'
+            .'</tr>';
 
         foreach ($baris as $index => $b) {
             $warna = $warnaBaris($b['kategori']);
             $html .= '<tr>'
-                . '<td align="center">' . ($index + 1) . '</td>'
-                . '<td align="center" x:num="' . htmlspecialchars((string) $b['id_karyawan']) . '">' . htmlspecialchars((string) $b['id_karyawan']) . '</td>'
-                . '<td>' . htmlspecialchars($b['nama']) . '</td>'
-                . '<td>' . htmlspecialchars($b['jabatan']) . '</td>'
-                . '<td align="center" x:num="' . $b['total_hari_kerja'] . '">' . $b['total_hari_kerja'] . '</td>'
-                . '<td align="center" x:num="' . $b['total_jam_kerja'] . '">' . number_format($b['total_jam_kerja'], 1, ',', '') . '</td>'
-                . '<td align="center" x:num="' . $b['rata_rata_jam'] . '">' . number_format($b['rata_rata_jam'], 1, ',', '') . '</td>'
-                . '<td align="center" style="background:' . $warna . '">' . htmlspecialchars($b['riport']) . '</td>'
-                . '<td>' . htmlspecialchars($b['catatan']) . '</td>'
-                . '</tr>';
+                .'<td align="center">'.($index + 1).'</td>'
+                .'<td align="center" x:num="'.htmlspecialchars((string) $b['id_karyawan']).'">'.htmlspecialchars((string) $b['id_karyawan']).'</td>'
+                .'<td>'.htmlspecialchars($b['nama']).'</td>'
+                .'<td>'.htmlspecialchars($b['jabatan']).'</td>'
+                .'<td align="center" x:num="'.$b['total_hari_kerja'].'">'.$b['total_hari_kerja'].'</td>'
+                .'<td align="center" x:num="'.$b['total_jam_kerja'].'">'.number_format($b['total_jam_kerja'], 1, ',', '').'</td>'
+                .'<td align="center" x:num="'.$b['rata_rata_jam'].'">'.number_format($b['rata_rata_jam'], 1, ',', '').'</td>'
+                .'<td align="center" style="background:'.$warna.'">'.htmlspecialchars($b['riport']).'</td>'
+                .'<td>'.htmlspecialchars($b['catatan']).'</td>'
+                .'</tr>';
         }
 
         if ($jumlahBaris > 0) {
             $html .= '<tr class="total">'
-                . '<td align="center">TOTAL</td>'
-                . '<td align="center"></td>'
-                . '<td align="center">' . $jumlahBaris . ' karyawan</td>'
-                . '<td align="center"></td>'
-                . '<td align="center" x:num="=SUM(E2:E' . $barisTerakhir . ')">=' . $ringkasan['total_hari_kerja'] . '</td>'
-                . '<td align="center" x:num="=SUM(F2:F' . $barisTerakhir . ')">' . number_format($ringkasan['total_jam_kerja'], 1, ',', '') . '</td>'
-                . '<td align="center" x:num="=AVERAGE(G2:G' . $barisTerakhir . ')">' . number_format($ringkasan['rata_rata_jam'], 1, ',', '') . '</td>'
-                . '<td align="center">-</td>'
-                . '<td align="center">-</td>'
-                . '</tr>';
+                .'<td align="center">TOTAL</td>'
+                .'<td align="center"></td>'
+                .'<td align="center">'.$jumlahBaris.' karyawan</td>'
+                .'<td align="center"></td>'
+                .'<td align="center" x:num="=SUM(E2:E'.$barisTerakhir.')">='.$ringkasan['total_hari_kerja'].'</td>'
+                .'<td align="center" x:num="=SUM(F2:F'.$barisTerakhir.')">'.number_format($ringkasan['total_jam_kerja'], 1, ',', '').'</td>'
+                .'<td align="center" x:num="=AVERAGE(G2:G'.$barisTerakhir.')">'.number_format($ringkasan['rata_rata_jam'], 1, ',', '').'</td>'
+                .'<td align="center">-</td>'
+                .'<td align="center">-</td>'
+                .'</tr>';
         }
 
         $html .= '</table></body></html>';

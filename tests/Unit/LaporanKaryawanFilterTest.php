@@ -15,7 +15,7 @@ class LaporanKaryawanFilterTest extends TestCase
 {
     private function parse($raw): array
     {
-        $controller = new LaporanController(new LaporanKehadiranService());
+        $controller = new LaporanController(new LaporanKehadiranService);
         $method = new ReflectionMethod($controller, 'parseKaryawanIds');
         $method->setAccessible(true);
 

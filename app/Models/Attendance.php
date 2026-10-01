@@ -15,7 +15,7 @@ class Attendance extends Model
         'jam_masuk',
         'jam_pulang',
         'status',
-        'verifikasi'
+        'verifikasi',
     ];
 
     // Relasi: Satu baris absensi dimiliki oleh satu karyawan

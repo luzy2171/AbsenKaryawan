@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Helpers\AuditLogger;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
-use App\Helpers\AuditLogger;
 
 class UserController extends Controller
 {
@@ -17,6 +17,7 @@ class UserController extends Controller
     public function index()
     {
         $users = User::orderBy('role', 'asc')->orderBy('name', 'asc')->get();
+
         return view('admin.users.index', compact('users'));
     }
 
@@ -26,19 +27,19 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'     => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'username' => 'required|string|max:255|unique:users,username',
-            'email'    => 'required|email|max:255|unique:users,email',
+            'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:6',
-            'role'     => 'required|in:admin,superadmin,approval',
+            'role' => 'required|in:admin,superadmin,approval',
         ]);
 
         $user = User::create([
-            'name'     => $request->name,
+            'name' => $request->name,
             'username' => $request->username,
-            'email'    => $request->email,
+            'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role'     => $request->role,
+            'role' => $request->role,
         ]);
 
         // Log audit
@@ -55,10 +56,10 @@ class UserController extends Controller
         $user = User::findOrFail($id);
 
         $request->validate([
-            'name'     => 'required|string|max:255',
+            'name' => 'required|string|max:255',
             'username' => ['required', 'string', 'max:255', Rule::unique('users', 'username')->ignore($user->id)],
-            'email'    => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'role'     => 'required|in:admin,superadmin,approval',
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'role' => 'required|in:admin,superadmin,approval',
             'password' => 'nullable|string|min:6',
         ]);
 
@@ -69,10 +70,10 @@ class UserController extends Controller
             'role' => $user->role,
         ];
 
-        $user->name     = $request->name;
+        $user->name = $request->name;
         $user->username = $request->username;
-        $user->email    = $request->email;
-        $user->role     = $request->role;
+        $user->email = $request->email;
+        $user->role = $request->role;
 
         // Password hanya diubah jika diisi
         if ($request->filled('password')) {

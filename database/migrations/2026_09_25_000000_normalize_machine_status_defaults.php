@@ -31,7 +31,7 @@ return new class extends Migration
             ->update(['machine_name' => 'Solution X100C']);
 
         $hasDefault = DB::table('machine_status')->where('is_default', true)->exists();
-        if (!$hasDefault) {
+        if (! $hasDefault) {
             $firstMachine = DB::table('machine_status')->orderBy('id')->value('id');
             if ($firstMachine) {
                 DB::table('machine_status')->where('id', $firstMachine)->update(['is_default' => true]);
@@ -39,7 +39,5 @@ return new class extends Migration
         }
     }
 
-    public function down(): void
-    {
-    }
+    public function down(): void {}
 };

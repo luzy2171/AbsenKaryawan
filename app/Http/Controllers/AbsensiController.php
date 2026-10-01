@@ -2,19 +2,36 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Karyawan;
-use App\Models\Attendance;
-use App\Models\Lembur;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\DB;
-use App\Helpers\AuditLogger;
 use App\Events\AttendanceRecorded;
+use App\Helpers\AuditLogger;
+use App\Helpers\CompanyProfile;
+use App\Models\Attendance;
+use App\Models\Karyawan;
+use App\Models\Lembur;
+use App\Models\MachineStatus;
 use App\Services\SolutionSoapService;
+use App\Services\SolutionX100CService;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class AbsensiController extends Controller
 {
+    /**
+     * Kunci penarikan absensi. Dipakai juga oleh PullAbsensiCommand supaya
+     * tombol manual dan scheduler tidak pernah berjalan bersamaan.
+     */
+    public const LOCK_ABSENSI = 'sinkronisasi-absensi';
+
+    /**
+     * Lama kunci (detik). Harus lebih panjang dari waktu menarik log mesin;
+     * sebelumnya 10 detik sehingga lock habis di tengah proses dan request
+     * kedua masuk, lalu keduanya membuat baris absensi kembar.
+     */
+    public const LOCK_TTL_ABSENSI = 180;
+
     /**
      * Normalisasi parameter karyawan_id dari form Cetak Laporan.
      * Menerima checkbox (karyawan_id[]), string comma-separated, maupun nilai kosong.
@@ -43,18 +60,18 @@ class AbsensiController extends Controller
 
         // Hitung status kehadiran berdasarkan data hari ini
         $hadirHariIni = Attendance::where('tanggal', $hariIni)->where('status', 'Hadir')->count();
-        $terlambat    = Attendance::where('tanggal', $hariIni)->where('status', 'Terlambat')->count();
+        $terlambat = Attendance::where('tanggal', $hariIni)->where('status', 'Terlambat')->count();
 
         // Karyawan yang belum tap jari hari ini dianggap Alpha
-        $tidakHadir   = $totalKaryawan - ($hadirHariIni + $terlambat);
-        $tidakHadir   = $tidakHadir < 0 ? 0 : $tidakHadir;
+        $tidakHadir = $totalKaryawan - ($hadirHariIni + $terlambat);
+        $tidakHadir = $tidakHadir < 0 ? 0 : $tidakHadir;
 
         // Ambil 5 riwayat absensi terbaru untuk dipasang di tabel "Absensi Terbaru"
         $absensiTerbaru = Attendance::with('karyawan')
-                            ->where('tanggal', $hariIni)
-                            ->orderBy('jam_masuk', 'desc')
-                            ->take(5)
-                            ->get();
+            ->where('tanggal', $hariIni)
+            ->orderBy('jam_masuk', 'desc')
+            ->take(5)
+            ->get();
 
         return view('dashboard', compact('totalKaryawan', 'hadirHariIni', 'terlambat', 'tidakHadir', 'absensiTerbaru'));
     }
@@ -66,8 +83,8 @@ class AbsensiController extends Controller
     {
         // Ambil filter tanggal dari UI (jika kosong, default ke hari ini)
         $tanggalFilter = $request->input('tanggal', Carbon::today()->toDateString());
-        $statusFilter  = $request->input('status');
-        $search        = $request->input('search');
+        $statusFilter = $request->input('status');
+        $search = $request->input('search');
 
         $query = Attendance::with('karyawan', 'lembur')->where('tanggal', $tanggalFilter);
 
@@ -78,8 +95,8 @@ class AbsensiController extends Controller
 
         // Filter pencarian berdasarkan nama karyawan melalui relasi
         if ($search != '') {
-            $query->whereHas('karyawan', function($q) use ($search) {
-                $q->where('nama', 'like', '%' . $search . '%');
+            $query->whereHas('karyawan', function ($q) use ($search) {
+                $q->where('nama', 'like', '%'.$search.'%');
             });
         }
 
@@ -100,7 +117,7 @@ class AbsensiController extends Controller
     public function toggleAutoPull(Request $request)
     {
         $request->validate([
-            'status' => 'required|in:ON,OFF'
+            'status' => 'required|in:ON,OFF',
         ]);
 
         Storage::put('auto_pull_status.txt', $request->status);
@@ -108,31 +125,33 @@ class AbsensiController extends Controller
         // Log audit
         AuditLogger::autoPullToggled($request->status === 'ON');
 
-        return back()->with('status', 'Status tarik data otomatis berhasil diubah menjadi: ' . $request->status);
+        return back()->with('status', 'Status tarik data otomatis berhasil diubah menjadi: '.$request->status);
     }
 
     /**
      * PERBAIKAN LOGIKA: Memproses Penarikan Data Log Mesin Berdasarkan Pengaturan Jam Kerja Dinamis (ANTI-DUPLIKASI)
      */
-    public function tarikDataDariMesin(\App\Services\SolutionX100CService $zktecoService, SolutionSoapService $soapService)
+    public function tarikDataDariMesin(SolutionX100CService $zktecoService, SolutionSoapService $soapService)
     {
-        // Cegah eksekusi paralel jika tombol diklik berkali-kali
-        $lock = \Illuminate\Support\Facades\Cache::lock('sync-absensi', 10);
-        if (!$lock->get()) {
+        // Cegah eksekusi paralel. TTL harus lebih panjang dari waktu menarik log
+        // mesin; sebelumnya 10 detik sehingga lock habis di tengah proses,
+        // request kedua masuk dan keduanya membuat baris absensi kembar.
+        $lock = Cache::lock(self::LOCK_ABSENSI, self::LOCK_TTL_ABSENSI);
+        if (! $lock->get()) {
             return back()->with('error', 'Proses sinkronisasi sedang berjalan, harap tunggu.');
         }
 
         try {
             $startTime = microtime(true);
             $rawLogs = [];
-            $machines = \App\Models\MachineStatus::whereIn('machine_type', ['solution', 'x100c'])->get();
+            $machines = MachineStatus::whereIn('machine_type', ['solution', 'x100c'])->get();
 
             // 1. Tarik log absensi dari seluruh perangkat yang terdaftar di database
             $connected = false;
             foreach ($machines as $m) {
                 $service = $this->serviceForMachine($m, $zktecoService, $soapService);
                 $logs = $service->downloadLogTigaBulan();
-                $rawLogs = array_merge($rawLogs, (array)$logs);
+                $rawLogs = array_merge($rawLogs, (array) $logs);
                 $machineConnected = $service->wasLastConnectionSuccessful();
                 $m->updateStatus($machineConnected, $machineConnected ? round((microtime(true) - $startTime) * 1000) : null);
                 if ($machineConnected) {
@@ -140,109 +159,110 @@ class AbsensiController extends Controller
                 }
             }
 
-        if (empty($rawLogs)) {
-            $lock->release();
-            if (!$connected) {
-                return back()->with('error', 'Koneksi ke mesin absensi terputus. Pastikan mesin dalam keadaan nyala dan terhubung jaringan.');
+            if (empty($rawLogs)) {
+                $lock->release();
+                if (! $connected) {
+                    return back()->with('error', 'Koneksi ke mesin absensi terputus. Pastikan mesin dalam keadaan nyala dan terhubung jaringan.');
+                }
+
+                return back()->with('error', 'Tidak ada data log absensi baru dalam 3 bulan terakhir.');
             }
 
-            return back()->with('error', 'Tidak ada data log absensi baru dalam 3 bulan terakhir.');
-        }
+            // Hitung response time
+            $responseTime = round((microtime(true) - $startTime) * 1000); // dalam ms
 
-        // Hitung response time
-        $responseTime = round((microtime(true) - $startTime) * 1000); // dalam ms
+            // 2. AMBIL PARAMETER DINAMIS DARI DATABASE SETTINGS (DENGAN FALLBACK DEFAULT)
+            $jamMasukSetting = DB::table('settings')->where('key', 'jam_masuk')->value('value') ?? '08:00';
+            $toleransi = DB::table('settings')->where('key', 'toleransi_terlambat')->value('value') ?? '15';
+            $batasWaktuMasuk = Carbon::createFromFormat('H:i', $jamMasukSetting)->addMinutes((int) $toleransi)->format('H:i:s');
 
-        // 2. AMBIL PARAMETER DINAMIS DARI DATABASE SETTINGS (DENGAN FALLBACK DEFAULT)
-        $jamMasukSetting = DB::table('settings')->where('key', 'jam_masuk')->value('value') ?? '08:00';
-        $toleransi       = DB::table('settings')->where('key', 'toleransi_terlambat')->value('value') ?? '15';
-        $batasWaktuMasuk = Carbon::createFromFormat('H:i', $jamMasukSetting)->addMinutes((int)$toleransi)->format('H:i:s');
+            $dataMasukBaru = 0;
+            $dataPulangDiupdate = 0;
 
-        $dataMasukBaru = 0;
-        $dataPulangDiupdate = 0;
+            // Urutkan log dari yang paling lama ke paling baru (kronologis) agar masuk dulu baru pulang
+            usort($rawLogs, function ($a, $b) {
+                return strcmp($a['datetime'], $b['datetime']);
+            });
 
-        // Urutkan log dari yang paling lama ke paling baru (kronologis) agar masuk dulu baru pulang
-        usort($rawLogs, function($a, $b) {
-            return strcmp($a['datetime'], $b['datetime']);
-        });
+            foreach ($rawLogs as $log) {
+                // Cocokkan PIN mesin dengan data karyawan di database
+                $karyawan = Karyawan::where('id_karyawan', $log['pin'])->first();
 
-        foreach ($rawLogs as $log) {
-            // Cocokkan PIN mesin dengan data karyawan di database
-            $karyawan = Karyawan::where('id_karyawan', $log['pin'])->first();
+                if ($karyawan) {
+                    $timestamp = Carbon::parse($log['datetime']);
+                    $tanggal = $timestamp->toDateString();
+                    $jam = $timestamp->toTimeString();
+                    $methodVerifikasi = $log['verified'] == '1' ? 'Sidik Jari' : 'Password/Lainnya';
 
-            if ($karyawan) {
-                $timestamp = Carbon::parse($log['datetime']);
-                $tanggal = $timestamp->toDateString();
-                $jam = $timestamp->toTimeString();
-                $methodVerifikasi = $log['verified'] == '1' ? 'Sidik Jari' : 'Password/Lainnya';
+                    // 3. CEK KETAT: Apakah karyawan ini SUDAH memiliki catatan absensi PADA TANGGAL TERSEBUT
+                    $attendanceHariIni = Attendance::where('karyawan_id', $karyawan->id)
+                        ->where('tanggal', $tanggal)
+                        ->first();
 
-                // 3. CEK KETAT: Apakah karyawan ini SUDAH memiliki catatan absensi PADA TANGGAL TERSEBUT
-                $attendanceHariIni = Attendance::where('karyawan_id', $karyawan->id)
-                                               ->where('tanggal', $tanggal)
-                                               ->first();
+                    if (! $attendanceHariIni) {
+                        // JIKA BELUM ADA RECORD DI TANGGAL ITU: Masuk sebagai scan pertama (Jam Masuk)
+                        $statusKehadiran = ($jam > $batasWaktuMasuk) ? 'Terlambat' : 'Hadir';
 
-                if (!$attendanceHariIni) {
-                    // JIKA BELUM ADA RECORD DI TANGGAL ITU: Masuk sebagai scan pertama (Jam Masuk)
-                    $statusKehadiran = ($jam > $batasWaktuMasuk) ? 'Terlambat' : 'Hadir';
+                        // firstOrCreate, bukan create: kalau proses lain sambil itu sudah
+                        // membuat baris untuk tanggal yang sama, unique index
+                        // (karyawan_id, tanggal) akan menolak dan kita pakai baris itu.
+                        $attendance = Attendance::firstOrCreate(
+                            ['karyawan_id' => $karyawan->id, 'tanggal' => $tanggal],
+                            ['jam_masuk' => $jam, 'jam_pulang' => null, 'status' => $statusKehadiran, 'verifikasi' => $methodVerifikasi]
+                        );
 
-                    $attendance = Attendance::create([
-                        'karyawan_id' => $karyawan->id,
-                        'tanggal'     => $tanggal,
-                        'jam_masuk'   => $jam,
-                        'jam_pulang'  => null,
-                        'status'      => $statusKehadiran,
-                        'verifikasi'  => $methodVerifikasi
-                    ]);
+                        if ($attendance->wasRecentlyCreated) {
+                            // Broadcast event untuk real-time update
+                            event(new AttendanceRecorded($attendance));
 
-                    // Broadcast event untuk real-time update
-                    event(new AttendanceRecorded($attendance));
+                            $dataMasukBaru++;
+                        }
+                    } else {
+                        // JIKA SUDAH ADA RECORD DI TANGGAL ITU: Update kolom jam_pulang yang sudah ada, JANGAN buat baris baru!
+                        if ($jam > $attendanceHariIni->jam_masuk) {
+                            // Pastikan tidak menimpa data jam_pulang lama jika jam scan baru bernilai lebih kecil/sama
+                            if (is_null($attendanceHariIni->jam_pulang) || $jam > $attendanceHariIni->jam_pulang) {
+                                $attendanceHariIni->update([
+                                    'jam_pulang' => $jam,
+                                ]);
+                                $dataPulangDiupdate++;
 
-                    $dataMasukBaru++;
-                } else {
-                    // JIKA SUDAH ADA RECORD DI TANGGAL ITU: Update kolom jam_pulang yang sudah ada, JANGAN buat baris baru!
-                    if ($jam > $attendanceHariIni->jam_masuk) {
-                        // Pastikan tidak menimpa data jam_pulang lama jika jam scan baru bernilai lebih kecil/sama
-                        if (is_null($attendanceHariIni->jam_pulang) || $jam > $attendanceHariIni->jam_pulang) {
-                            $attendanceHariIni->update([
-                                'jam_pulang' => $jam
-                            ]);
-                            $dataPulangDiupdate++;
+                                // CEK LEMBUR OTOMATIS
+                                $jamLemburMulai = DB::table('settings')->where('key', 'jam_lembur_mulai')->value('value') ?? '17:00';
 
-                            // CEK LEMBUR OTOMATIS
-                            $jamLemburMulai = DB::table('settings')->where('key', 'jam_lembur_mulai')->value('value') ?? '17:00';
-                            
-                            // Jika jam pulang melewati jam mulai lembur
-                            if ($jam > $jamLemburMulai) {
-                                $waktuMulaiLembur = Carbon::createFromFormat('H:i', $jamLemburMulai);
-                                $waktuPulang = Carbon::createFromFormat('H:i:s', $jam);
-                                
-                                $lamaLembur = $waktuMulaiLembur->diffInMinutes($waktuPulang);
+                                // Jika jam pulang melewati jam mulai lembur
+                                if ($jam > $jamLemburMulai) {
+                                    $waktuMulaiLembur = Carbon::createFromFormat('H:i', $jamLemburMulai);
+                                    $waktuPulang = Carbon::createFromFormat('H:i:s', $jam);
 
-                                if ($lamaLembur > 0) {
-                                    // Update atau buat data lembur baru
-                                    Lembur::updateOrCreate(
-                                        [
-                                            'attendance_id' => $attendanceHariIni->id,
-                                            'karyawan_id'   => $karyawan->id,
-                                            'tanggal'       => $tanggal,
-                                        ],
-                                        [
-                                            'jam_lembur_mulai'   => $jamLemburMulai,
-                                            'jam_lembur_selesai' => $jam,
-                                            'lama_lembur'        => $lamaLembur,
-                                        ]
-                                    );
+                                    $lamaLembur = $waktuMulaiLembur->diffInMinutes($waktuPulang);
+
+                                    if ($lamaLembur > 0) {
+                                        // Update atau buat data lembur baru
+                                        Lembur::updateOrCreate(
+                                            [
+                                                'attendance_id' => $attendanceHariIni->id,
+                                                'karyawan_id' => $karyawan->id,
+                                                'tanggal' => $tanggal,
+                                            ],
+                                            [
+                                                'jam_lembur_mulai' => $jamLemburMulai,
+                                                'jam_lembur_selesai' => $jam,
+                                                'lama_lembur' => $lamaLembur,
+                                            ]
+                                        );
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // Log audit
-        AuditLogger::absensiPulled($dataMasukBaru + $dataPulangDiupdate);
+            // Log audit
+            AuditLogger::absensiPulled($dataMasukBaru + $dataPulangDiupdate);
 
-        return back()->with('status', "Sinkronisasi berhasil! Berhasil menambahkan $dataMasukBaru data masuk baru dan memperbarui $dataPulangDiupdate jam pulang.");
+            return back()->with('status', "Sinkronisasi berhasil! Berhasil menambahkan $dataMasukBaru data masuk baru dan memperbarui $dataPulangDiupdate jam pulang.");
         } finally {
             $lock->release();
         }
@@ -254,19 +274,19 @@ class AbsensiController extends Controller
     public function cetakLaporan(Request $request)
     {
         $request->validate([
-            'tanggal_mulai'   => 'required|date',
+            'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'karyawan_id'     => 'nullable'
+            'karyawan_id' => 'nullable',
         ]);
 
-        $mulai      = $request->tanggal_mulai;
-        $selesai    = $request->tanggal_selesai;
+        $mulai = $request->tanggal_mulai;
+        $selesai = $request->tanggal_selesai;
 
         $karyawanIds = $this->parseKaryawanIds($request->input('karyawan_id'));
 
         $query = Attendance::with('karyawan')->whereBetween('tanggal', [$mulai, $selesai]);
 
-        if (!empty($karyawanIds)) {
+        if (! empty($karyawanIds)) {
             $query->whereIn('karyawan_id', $karyawanIds);
         }
 
@@ -276,44 +296,44 @@ class AbsensiController extends Controller
         $cleanedAttendances = [];
 
         foreach ($attendancesRaw as $att) {
-            $key = $att->karyawan_id . '_' . $att->tanggal;
+            $key = $att->karyawan_id.'_'.$att->tanggal;
 
-            $jamScan        = $att->jam_masuk ? date('H:i', strtotime($att->jam_masuk)) : null;
+            $jamScan = $att->jam_masuk ? date('H:i', strtotime($att->jam_masuk)) : null;
             $jamPulangExist = $att->jam_pulang ? date('H:i', strtotime($att->jam_pulang)) : null;
 
-            if (!isset($cleanedAttendances[$key])) {
-                $masuk  = $jamScan;
+            if (! isset($cleanedAttendances[$key])) {
+                $masuk = $jamScan;
                 $pulang = $jamPulangExist;
 
-                if ($jamScan && !$pulang && $jamScan >= '12:00') {
+                if ($jamScan && ! $pulang && $jamScan >= '12:00') {
                     $pulang = $jamScan;
-                    $masuk  = null;
+                    $masuk = null;
                 }
 
                 $cleanedAttendances[$key] = [
                     'id_karyawan' => $att->karyawan->id_karyawan ?? '-',
-                    'nama'        => $att->karyawan->nama ?? '-',
-                    'tanggal'     => $att->tanggal,
-                    'jam_masuk'   => $masuk,
-                    'jam_pulang'  => $pulang,
-                    'status'      => $att->status,
-                    'lama_lembur' => $att->lembur ? $att->lembur->lama_lembur : 0
+                    'nama' => $att->karyawan->nama ?? '-',
+                    'tanggal' => $att->tanggal,
+                    'jam_masuk' => $masuk,
+                    'jam_pulang' => $pulang,
+                    'status' => $att->status,
+                    'lama_lembur' => $att->lembur ? $att->lembur->lama_lembur : 0,
                 ];
             } else {
                 if ($jamScan) {
                     if ($jamScan >= '12:00') {
-                        if (!$cleanedAttendances[$key]['jam_pulang'] || $jamScan > $cleanedAttendances[$key]['jam_pulang']) {
+                        if (! $cleanedAttendances[$key]['jam_pulang'] || $jamScan > $cleanedAttendances[$key]['jam_pulang']) {
                             $cleanedAttendances[$key]['jam_pulang'] = $jamScan;
                         }
                     } else {
-                        if (!$cleanedAttendances[$key]['jam_masuk'] || $jamScan < $cleanedAttendances[$key]['jam_masuk']) {
+                        if (! $cleanedAttendances[$key]['jam_masuk'] || $jamScan < $cleanedAttendances[$key]['jam_masuk']) {
                             $cleanedAttendances[$key]['jam_masuk'] = $jamScan;
                         }
                     }
                 }
 
                 if ($jamPulangExist) {
-                    if (!$cleanedAttendances[$key]['jam_pulang'] || $jamPulangExist > $cleanedAttendances[$key]['jam_pulang']) {
+                    if (! $cleanedAttendances[$key]['jam_pulang'] || $jamPulangExist > $cleanedAttendances[$key]['jam_pulang']) {
                         $cleanedAttendances[$key]['jam_pulang'] = $jamPulangExist;
                     }
                 }
@@ -322,7 +342,7 @@ class AbsensiController extends Controller
 
         // KUNCI PENGURUTAN:
         // Urutkan berdasarkan ID/PIN Karyawan secara numerik terlebih dahulu, lalu urutkan Tanggal secara kronologis
-        usort($cleanedAttendances, function($a, $b) {
+        usort($cleanedAttendances, function ($a, $b) {
             $pinA = (int) $a['id_karyawan'];
             $pinB = (int) $b['id_karyawan'];
 
@@ -348,19 +368,19 @@ class AbsensiController extends Controller
     public function exportExcel(Request $request)
     {
         $request->validate([
-            'tanggal_mulai'   => 'required|date',
+            'tanggal_mulai' => 'required|date',
             'tanggal_selesai' => 'required|date|after_or_equal:tanggal_mulai',
-            'karyawan_id'     => 'nullable'
+            'karyawan_id' => 'nullable',
         ]);
 
-        $mulai      = $request->tanggal_mulai;
-        $selesai    = $request->tanggal_selesai;
+        $mulai = $request->tanggal_mulai;
+        $selesai = $request->tanggal_selesai;
 
         $karyawanIds = $this->parseKaryawanIds($request->input('karyawan_id'));
 
         $query = Attendance::with('karyawan')->whereBetween('tanggal', [$mulai, $selesai]);
 
-        if (!empty($karyawanIds)) {
+        if (! empty($karyawanIds)) {
             $query->whereIn('karyawan_id', $karyawanIds);
         }
 
@@ -368,52 +388,52 @@ class AbsensiController extends Controller
         $cleanedAttendances = [];
 
         foreach ($attendancesRaw as $att) {
-            $key = $att->karyawan_id . '_' . $att->tanggal;
+            $key = $att->karyawan_id.'_'.$att->tanggal;
 
-            $jamScan        = $att->jam_masuk ? date('H:i', strtotime($att->jam_masuk)) : null;
+            $jamScan = $att->jam_masuk ? date('H:i', strtotime($att->jam_masuk)) : null;
             $jamPulangExist = $att->jam_pulang ? date('H:i', strtotime($att->jam_pulang)) : null;
 
-            if (!isset($cleanedAttendances[$key])) {
-                $masuk  = $jamScan;
+            if (! isset($cleanedAttendances[$key])) {
+                $masuk = $jamScan;
                 $pulang = $jamPulangExist;
 
-                if ($jamScan && !$pulang && $jamScan >= '12:00') {
+                if ($jamScan && ! $pulang && $jamScan >= '12:00') {
                     $pulang = $jamScan;
-                    $masuk  = null;
+                    $masuk = null;
                 }
 
                 $cleanedAttendances[$key] = [
                     'id_karyawan' => $att->karyawan->id_karyawan ?? '-',
-                    'nama'        => $att->karyawan->nama ?? '-',
-                    'tanggal'     => $att->tanggal,
-                    'jam_masuk'   => $masuk ? $masuk . ' WIB' : '-',
-                    'jam_pulang'  => $pulang ? $pulang . ' WIB' : '-',
-                    'status'      => $att->status,
-                    'lama_lembur' => $att->lembur ? $att->lembur->lama_lembur : 0
+                    'nama' => $att->karyawan->nama ?? '-',
+                    'tanggal' => $att->tanggal,
+                    'jam_masuk' => $masuk ? $masuk.' WIB' : '-',
+                    'jam_pulang' => $pulang ? $pulang.' WIB' : '-',
+                    'status' => $att->status,
+                    'lama_lembur' => $att->lembur ? $att->lembur->lama_lembur : 0,
                 ];
             } else {
                 if ($jamScan) {
                     if ($jamScan >= '12:00') {
-                        if (!$cleanedAttendances[$key]['jam_pulang'] || $jamScan > $cleanedAttendances[$key]['jam_pulang']) {
-                            $cleanedAttendances[$key]['jam_pulang'] = $jamScan . ' WIB';
+                        if (! $cleanedAttendances[$key]['jam_pulang'] || $jamScan > $cleanedAttendances[$key]['jam_pulang']) {
+                            $cleanedAttendances[$key]['jam_pulang'] = $jamScan.' WIB';
                         }
                     } else {
-                        if (!$cleanedAttendances[$key]['jam_masuk'] || $jamScan < $cleanedAttendances[$key]['jam_masuk']) {
-                            $cleanedAttendances[$key]['jam_masuk'] = $jamScan . ' WIB';
+                        if (! $cleanedAttendances[$key]['jam_masuk'] || $jamScan < $cleanedAttendances[$key]['jam_masuk']) {
+                            $cleanedAttendances[$key]['jam_masuk'] = $jamScan.' WIB';
                         }
                     }
                 }
 
                 if ($jamPulangExist) {
-                    if (!$cleanedAttendances[$key]['jam_pulang'] || $jamPulangExist > $cleanedAttendances[$key]['jam_pulang']) {
-                        $cleanedAttendances[$key]['jam_pulang'] = $jamPulangExist . ' WIB';
+                    if (! $cleanedAttendances[$key]['jam_pulang'] || $jamPulangExist > $cleanedAttendances[$key]['jam_pulang']) {
+                        $cleanedAttendances[$key]['jam_pulang'] = $jamPulangExist.' WIB';
                     }
                 }
             }
         }
 
         // PENGURUTAN RAPI: PIN Terkecil ke Terbesar -> Tanggal Kronologis
-        usort($cleanedAttendances, function($a, $b) {
+        usort($cleanedAttendances, function ($a, $b) {
             $pinA = (int) $a['id_karyawan'];
             $pinB = (int) $b['id_karyawan'];
 
@@ -424,7 +444,7 @@ class AbsensiController extends Controller
             return $pinA <=> $pinB;
         });
 
-        $filename = "Laporan_Absensi_" . date('d-m-Y', strtotime($mulai)) . "_s.d." . date('d-m-Y', strtotime($selesai)) . ".xls";
+        $filename = 'Laporan_Absensi_'.date('d-m-Y', strtotime($mulai)).'_s.d.'.date('d-m-Y', strtotime($selesai)).'.xls';
 
         // Generate Tampilan HTML Excel Rapi (Sesuai Layout Web / PDF)
         $html = '
@@ -446,10 +466,10 @@ class AbsensiController extends Controller
         <body>
             <table>
                 <tr>
-                    <td colspan="8" class="title">PT.BEJO BERKAH MAKMUR</td>
+                    <td colspan="8" class="title">'.htmlspecialchars(CompanyProfile::nama()).'</td>
                 </tr>
                 <tr>
-                    <td colspan="8" class="subtitle">LAPORAN DETAIL ABSENSI KARYAWAN | Periode: ' . date('d/m/Y', strtotime($mulai)) . ' s.d ' . date('d/m/Y', strtotime($selesai)) . ' | ' . (in_array('semua', (array)$karyawanIds) || empty($karyawanIds) ? 'Semua Karyawan' : implode(', ', \App\Models\Karyawan::whereIn('id', (array)$karyawanIds)->pluck('nama')->toArray())) . '</td>
+                    <td colspan="8" class="subtitle">LAPORAN DETAIL ABSENSI KARYAWAN | Periode: '.date('d/m/Y', strtotime($mulai)).' s.d '.date('d/m/Y', strtotime($selesai)).' | '.(in_array('semua', (array) $karyawanIds) || empty($karyawanIds) ? 'Semua Karyawan' : implode(', ', Karyawan::whereIn('id', (array) $karyawanIds)->pluck('nama')->toArray())).'</td>
                 </tr>
                 <tr><td colspan="8"></td></tr>
                 <tr class="header-table">
@@ -474,14 +494,14 @@ class AbsensiController extends Controller
 
             $html .= '
             <tr>
-                <td class="cell-center">' . $no++ . '</td>
-                <td class="cell-center" style="color: #d9534f; font-weight: bold;">' . $row['id_karyawan'] . '</td>
-                <td class="cell-left" style="font-weight: bold;">' . $row['nama'] . '</td>
-                <td class="cell-center">' . date('d/m/Y', strtotime($row['tanggal'])) . '</td>
-                <td class="cell-center">' . $row['jam_masuk'] . '</td>
-                <td class="cell-center">' . $row['jam_pulang'] . '</td>
-                <td class="cell-center">' . ($row['lama_lembur'] > 0 ? $row['lama_lembur'] . ' menit' : '-') . '</td>
-                <td class="' . $statusClass . '">' . $row['status'] . '</td>
+                <td class="cell-center">'.$no++.'</td>
+                <td class="cell-center" style="color: #d9534f; font-weight: bold;">'.$row['id_karyawan'].'</td>
+                <td class="cell-left" style="font-weight: bold;">'.$row['nama'].'</td>
+                <td class="cell-center">'.date('d/m/Y', strtotime($row['tanggal'])).'</td>
+                <td class="cell-center">'.$row['jam_masuk'].'</td>
+                <td class="cell-center">'.$row['jam_pulang'].'</td>
+                <td class="cell-center">'.($row['lama_lembur'] > 0 ? $row['lama_lembur'].' menit' : '-').'</td>
+                <td class="'.$statusClass.'">'.$row['status'].'</td>
             </tr>';
         }
 
@@ -494,9 +514,9 @@ class AbsensiController extends Controller
         AuditLogger::absensiExported('Excel', count($cleanedAttendances));
 
         return response($html, 200, [
-            'Content-Type'        => 'application/vnd.ms-excel; charset=utf-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-            'Cache-Control'       => 'max-age=0'
+            'Content-Type' => 'application/vnd.ms-excel; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+            'Cache-Control' => 'max-age=0',
         ]);
     }
 
@@ -526,7 +546,7 @@ class AbsensiController extends Controller
 
         AuditLogger::absensiPulled(1);
 
-        return back()->with('status', 'Data lembur berhasil ditambahkan! (' . $lamaLembur . ' menit)');
+        return back()->with('status', 'Data lembur berhasil ditambahkan! ('.$lamaLembur.' menit)');
     }
 
     public function destroyLembur($id)
@@ -537,7 +557,7 @@ class AbsensiController extends Controller
         return back()->with('status', 'Data lembur berhasil dihapus!');
     }
 
-    protected function serviceForMachine($machine, \App\Services\SolutionX100CService $binaryService, SolutionSoapService $soapService)
+    protected function serviceForMachine($machine, SolutionX100CService $binaryService, SolutionSoapService $soapService)
     {
         $transport = strtolower((string) env('SOLUTION_TRANSPORT', 'soap'));
         if ($transport !== 'binary' && ($transport === 'soap' || (int) ($machine->port ?? 0) === 80)) {
@@ -546,10 +566,12 @@ class AbsensiController extends Controller
                 (int) env('SOLUTION_SOAP_PORT', 80),
                 $machine->username
             );
+
             return $soapService;
         }
 
         $binaryService->setConnection($machine->machine_ip, $machine->port ?? 4370);
+
         return $binaryService;
     }
 }

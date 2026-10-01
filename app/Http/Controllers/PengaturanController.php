@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Services\SolutionX100CService;
-use App\Services\SolutionSoapService;
 use App\Helpers\AuditLogger;
-use App\Models\MachineStatus;
 use App\Models\Karyawan;
+use App\Models\MachineStatus;
+use App\Services\SolutionSoapService;
+use App\Services\SolutionX100CService;
+use Illuminate\Http\Request;
 
 class PengaturanController extends Controller
 {
@@ -32,19 +32,19 @@ class PengaturanController extends Controller
             $currentMachine = MachineStatus::find($primaryMachine->id);
         }
 
-        $shouldViewUsers = $request->has('view_users') || (!$request->has('view_logs') && !$request->has('download_fp'));
+        $shouldViewUsers = $request->has('view_users') || (! $request->has('view_logs') && ! $request->has('download_fp'));
 
         if ($shouldViewUsers && $primaryMachine) {
-            list($users, $connected) = $this->getUsersFromMachineWithStatus($service, $primaryMachine);
-            if (!$connected) {
+            [$users, $connected] = $this->getUsersFromMachineWithStatus($service, $primaryMachine);
+            if (! $connected) {
                 $primaryMachine->updateStatus(false);
                 $currentMachine = MachineStatus::find($primaryMachine->id);
             }
         }
 
         if ($request->has('view_logs') && $primaryMachine) {
-            list($logs, $connected) = $this->getLogsFromMachineWithStatus($service, $primaryMachine);
-            if (!$connected) {
+            [$logs, $connected] = $this->getLogsFromMachineWithStatus($service, $primaryMachine);
+            if (! $connected) {
                 $primaryMachine->updateStatus(false);
                 $currentMachine = MachineStatus::find($primaryMachine->id);
             }
@@ -97,7 +97,7 @@ class PengaturanController extends Controller
         return response()->json([
             'success' => true,
             'status' => $machine->status,
-            'message' => "Status {$machine->machine_name} diperbarui menjadi {$machine->status}"
+            'message' => "Status {$machine->machine_name} diperbarui menjadi {$machine->status}",
         ]);
     }
 
@@ -166,7 +166,7 @@ class PengaturanController extends Controller
     public function clearMachineLogs(SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
         $machine = $this->getPrimaryMachine();
-        if (!$machine) {
+        if (! $machine) {
             return back()->with('error', 'Tidak ada mesin yang dipilih. Tentukan mesin terlebih dahulu.');
         }
 
@@ -181,7 +181,7 @@ class PengaturanController extends Controller
         $machine->updateStatus(true);
         AuditLogger::machineClearLog();
 
-        return back()->with('status', 'Log transaksi mesin berhasil dibersihkan! Respon Alat: ' . $result);
+        return back()->with('status', 'Log transaksi mesin berhasil dibersihkan! Respon Alat: '.$result);
     }
 
     /**
@@ -197,7 +197,7 @@ class PengaturanController extends Controller
         $machine = $request->filled('machine_id')
             ? MachineStatus::whereIn('machine_type', ['solution', 'x100c'])->findOrFail($request->integer('machine_id'))
             : $this->getPrimaryMachine();
-        if (!$machine) {
+        if (! $machine) {
             return back()->with('error', 'Tidak ada mesin yang dipilih.');
         }
 
@@ -212,7 +212,7 @@ class PengaturanController extends Controller
         $machine->updateStatus(true);
         AuditLogger::machineUserDeleted($request->input('user_id'));
 
-        return back()->with('status', 'Proses Hapus User Berhasil! Respon Alat: ' . $result);
+        return back()->with('status', 'Proses Hapus User Berhasil! Respon Alat: '.$result);
     }
 
     /**
@@ -221,7 +221,7 @@ class PengaturanController extends Controller
     public function synchronizeDeviceTime(SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
         $machine = $this->getPrimaryMachine();
-        if (!$machine) {
+        if (! $machine) {
             return back()->with('error', 'Tidak ada mesin yang dipilih.');
         }
 
@@ -229,14 +229,14 @@ class PengaturanController extends Controller
             return $s->syncTime();
         });
 
-        if (!is_string($result) || !str_starts_with($result, 'Waktu berhasil')) {
+        if (! is_string($result) || ! str_starts_with($result, 'Waktu berhasil')) {
             return back()->with('error', 'Gagal menyamakan waktu. Koneksi ke mesin terputus.');
         }
 
         $machine->updateStatus(true);
         AuditLogger::machineSync();
 
-        return back()->with('status', 'Waktu mesin berhasil disinkronkan dengan server web! Respon: ' . $result);
+        return back()->with('status', 'Waktu mesin berhasil disinkronkan dengan server web! Respon: '.$result);
     }
 
     /**
@@ -245,7 +245,7 @@ class PengaturanController extends Controller
     public function restartMachine(SolutionX100CService $zkService, SolutionSoapService $soapService)
     {
         $machine = $this->getPrimaryMachine();
-        if (!$machine) {
+        if (! $machine) {
             return back()->with('error', 'Tidak ada mesin yang dipilih.');
         }
 
@@ -259,7 +259,7 @@ class PengaturanController extends Controller
 
         AuditLogger::machineRestart();
 
-        return back()->with('status', 'Perintah restart berhasil dikirim! Mesin absensi sedang memuat ulang. Respon: ' . $result);
+        return back()->with('status', 'Perintah restart berhasil dikirim! Mesin absensi sedang memuat ulang. Respon: '.$result);
     }
 
     // ===================== HELPERS =====================
@@ -272,6 +272,7 @@ class PengaturanController extends Controller
     protected function executeOnMachine(SolutionX100CService $zkService, SolutionSoapService $soapService, $machine, callable $callback)
     {
         $service = $this->serviceForMachine($machine, $zkService, $soapService);
+
         return $callback($service, $machine);
     }
 
@@ -283,10 +284,12 @@ class PengaturanController extends Controller
                 (int) env('SOLUTION_SOAP_PORT', 80),
                 $machine->username
             );
+
             return $soapService;
         }
 
         $zkService->setConnection($machine->machine_ip, $machine->port ?? 4370);
+
         return $zkService;
     }
 
@@ -315,6 +318,7 @@ class PengaturanController extends Controller
             if ($online) {
                 $service->disconnect();
             }
+
             return $online;
         }
 
@@ -323,14 +327,19 @@ class PengaturanController extends Controller
 
     protected function getUsersFromMachineWithStatus($service, $machine)
     {
-        if (!$machine) return [[], false];
+        if (! $machine) {
+            return [[], false];
+        }
         $users = $service->getAllUsers();
+
         return [$users, $service->wasLastConnectionSuccessful()];
     }
 
     protected function getLogsFromMachineWithStatus($service, $machine)
     {
-        if (!$machine) return [[], false];
+        if (! $machine) {
+            return [[], false];
+        }
         $logs = $service->downloadLogTigaBulan();
 
         foreach ($logs as &$log) {

@@ -7,54 +7,89 @@ use Illuminate\Support\Facades\Log;
 class SolutionX100CService
 {
     protected $ip;
+
     protected $port;
+
     protected $stream;
+
     protected $sessionId = 0;
+
     protected $replyId = 0;
+
     protected $lastConnectionSucceeded = false;
 
     const USHRT_MAX = 65535;
+
     const HEADER_LENGTH = 8;
+
     const MAX_CHUNK_SIZE = 1024;
+
     const USER_RECORD_SIZE = 72;
+
     const ATTENDANCE_RECORD_SIZE = 40;
+
     const TIME_EPOCH_YEAR = 2000;
 
     const CMD_CONNECT = 1000;
+
     const CMD_EXIT = 1001;
+
     const CMD_ENABLE_DEVICE = 1002;
+
     const CMD_DISABLE_DEVICE = 1003;
+
     const CMD_RESTART = 1004;
+
     const CMD_POWEROFF = 1005;
+
     const CMD_SLEEP = 1006;
+
     const CMD_RESUME = 1007;
+
     const CMD_TESTVOICE = 1017;
+
     const CMD_WRITE_LCD = 66;
+
     const CMD_CLEAR_LCD = 67;
 
     const CMD_ACK_OK = 2000;
+
     const CMD_ACK_ERROR = 2001;
+
     const CMD_ACK_DATA = 2002;
+
     const CMD_ACK_UNAUTH = 2005;
 
     const CMD_PREPARE_DATA = 1500;
+
     const CMD_DATA = 1501;
+
     const CMD_FREE_DATA = 1502;
 
     const CMD_USER_TEMP_RRQ = 9;
+
     const CMD_ATT_LOG_RRQ = 13;
+
     const CMD_CLEAR_DATA = 14;
+
     const CMD_CLEAR_ATT_LOG = 15;
+
     const CMD_GET_TIME = 201;
+
     const CMD_SET_TIME = 202;
+
     const CMD_VERSION = 1100;
+
     const CMD_DEVICE = 11;
 
     const CMD_SET_USER = 8;
+
     const CMD_DELETE_USER = 18;
 
     const FCT_USER = 5;
+
     const COMMAND_TYPE_GENERAL = 'general';
+
     const COMMAND_TYPE_DATA = 'data';
 
     public function __construct()
@@ -85,30 +120,34 @@ class SolutionX100CService
         $address = "tcp://{$this->ip}:{$this->port}";
         $stream = @stream_socket_client($address, $errno, $errstr, 5, STREAM_CLIENT_CONNECT);
 
-        if (!$stream) {
+        if (! $stream) {
             Log::error("Solution X100C connect error: {$errno} - {$errstr}");
+
             return false;
         }
 
         stream_set_timeout($stream, 10);
+
         return $stream;
     }
 
     protected function sendCommand($command, $commandString = '', $type = self::COMMAND_TYPE_GENERAL)
     {
-        if (!$this->ensureStream()) {
+        if (! $this->ensureStream()) {
             return false;
         }
 
         $packet = $this->buildPacket($command, 0, $this->sessionId, $this->replyId, $commandString);
-        if (!$this->writeExactly($packet)) {
+        if (! $this->writeExactly($packet)) {
             $this->closeStream();
+
             return false;
         }
 
         $header = $this->readHeader();
         if ($header === false) {
             $this->closeStream();
+
             return false;
         }
 
@@ -136,17 +175,18 @@ class SolutionX100CService
         $command &= self::USHRT_MAX;
         $sessionId &= self::USHRT_MAX;
         $replyId &= self::USHRT_MAX;
-        $zeroed = pack('v4', $command, 0, $sessionId, $replyId) . $commandString;
+        $zeroed = pack('v4', $command, 0, $sessionId, $replyId).$commandString;
         $computedChksum = $this->calcChecksum($zeroed);
         $nextReplyId = ($replyId + 1) & self::USHRT_MAX;
         $this->replyId = $nextReplyId;
 
-        return pack('v4', $command, $computedChksum, $sessionId, $nextReplyId) . $commandString;
+        return pack('v4', $command, $computedChksum, $sessionId, $nextReplyId).$commandString;
     }
 
     protected function createChkSumForPacket($command, $chksum, $sessionId, $replyId, $commandString)
     {
-        $packet = pack('v4', $command, 0, $sessionId, $replyId) . $commandString;
+        $packet = pack('v4', $command, 0, $sessionId, $replyId).$commandString;
+
         return $this->calcChecksum($packet);
     }
 
@@ -168,11 +208,12 @@ class SolutionX100CService
     protected function readHeader()
     {
         $header = $this->readExactly(self::HEADER_LENGTH);
-        if ($header === false || !$this->checkValid($header)) {
+        if ($header === false || ! $this->checkValid($header)) {
             return false;
         }
 
         $values = unpack('vcommand/vchecksum/vsession/vreply', $header);
+
         return $values;
     }
 
@@ -237,6 +278,7 @@ class SolutionX100CService
         $packet[2] = "\0";
         $packet[3] = "\0";
         $calculated = $this->calcChecksum($packet);
+
         return $calculated === $values['checksum'];
     }
 
@@ -258,7 +300,7 @@ class SolutionX100CService
 
     protected function readExactly($length)
     {
-        if (!$this->stream || $length < 0) {
+        if (! $this->stream || $length < 0) {
             return false;
         }
 
@@ -267,9 +309,10 @@ class SolutionX100CService
             $chunk = @fread($this->stream, $length - strlen($data));
             if ($chunk === false || $chunk === '') {
                 $metadata = stream_get_meta_data($this->stream);
-                if (!empty($metadata['timed_out']) || feof($this->stream)) {
+                if (! empty($metadata['timed_out']) || feof($this->stream)) {
                     return false;
                 }
+
                 return false;
             }
             $data .= $chunk;
@@ -285,7 +328,7 @@ class SolutionX100CService
         }
 
         $this->stream = $this->connectStream();
-        if (!$this->stream) {
+        if (! $this->stream) {
             return false;
         }
 
@@ -325,6 +368,7 @@ class SolutionX100CService
 
             if ($name === '' || $pin === '') {
                 $userData = substr($userData, self::USER_RECORD_SIZE);
+
                 continue;
             }
 
@@ -378,6 +422,7 @@ class SolutionX100CService
     {
         $value = str_replace("\0", '', $value);
         $value = trim($value);
+
         return preg_match('//u', $value) ? $value : '';
     }
 
@@ -388,24 +433,27 @@ class SolutionX100CService
         $this->replyId = 0;
         $this->lastConnectionSucceeded = false;
 
-        if (!$this->ensureStream()) {
+        if (! $this->ensureStream()) {
             return false;
         }
 
         $packet = $this->buildPacket(self::CMD_CONNECT, 0, 0, 0, '');
-        if (!$this->writeExactly($packet)) {
+        if (! $this->writeExactly($packet)) {
             $this->closeStream();
+
             return false;
         }
 
         $header = $this->readHeader();
         if ($header === false || $header['command'] !== self::CMD_ACK_OK) {
             $this->closeStream();
+
             return false;
         }
 
         $this->sessionId = $header['session'];
         $this->lastConnectionSucceeded = true;
+
         return true;
     }
 
@@ -418,12 +466,13 @@ class SolutionX100CService
         $this->closeStream();
         $this->sessionId = 0;
         $this->replyId = 0;
+
         return true;
     }
 
     public function getAllUsers()
     {
-        if (!$this->connect()) {
+        if (! $this->connect()) {
             return [];
         }
 
@@ -435,12 +484,13 @@ class SolutionX100CService
 
         $users = $userData === false ? [] : $this->parseUsersData($userData);
         $this->disconnect();
+
         return $users;
     }
 
     public function downloadLogTigaBulan()
     {
-        if (!$this->connect()) {
+        if (! $this->connect()) {
             return [];
         }
 
@@ -455,30 +505,31 @@ class SolutionX100CService
             : $this->parseAttendanceData($attendanceData, strtotime('-3 months'));
 
         $this->disconnect();
+
         return $logs;
     }
 
     public function clearLogData()
     {
-        if (!$this->connect()) {
-            return "Koneksi Gagal";
+        if (! $this->connect()) {
+            return 'Koneksi Gagal';
         }
 
         $result = $this->sendCommand(self::CMD_CLEAR_ATT_LOG, '', self::COMMAND_TYPE_GENERAL);
         $this->disconnect();
 
-        return $result ? "Sukses" : "Gagal";
+        return $result ? 'Sukses' : 'Gagal';
     }
 
     public function hapusUser($id)
     {
-        if (!$this->isValidPin($id)) {
-            return "Gagal";
+        if (! $this->isValidPin($id)) {
+            return 'Gagal';
         }
 
         $users = $this->getAllUsers();
-        if (!$this->wasLastConnectionSuccessful()) {
-            return "Koneksi Gagal";
+        if (! $this->wasLastConnectionSuccessful()) {
+            return 'Koneksi Gagal';
         }
 
         $uid = null;
@@ -490,24 +541,24 @@ class SolutionX100CService
         }
 
         if ($uid === null) {
-            return "Gagal";
+            return 'Gagal';
         }
 
-        if (!$this->connect()) {
-            return "Koneksi Gagal";
+        if (! $this->connect()) {
+            return 'Koneksi Gagal';
         }
 
         $commandString = pack('v', $uid);
         $result = $this->sendCommand(self::CMD_DELETE_USER, $commandString, self::COMMAND_TYPE_GENERAL);
         $this->disconnect();
 
-        return $result ? "Sukses" : "Gagal";
+        return $result ? 'Sukses' : 'Gagal';
     }
 
     public function syncTime()
     {
-        if (!$this->connect()) {
-            return "Koneksi Gagal";
+        if (! $this->connect()) {
+            return 'Koneksi Gagal';
         }
 
         $now = date('Y-m-d H:i:s');
@@ -515,42 +566,42 @@ class SolutionX100CService
         $result = $this->sendCommand(self::CMD_SET_TIME, pack('V', $timeVal), self::COMMAND_TYPE_GENERAL);
         $this->disconnect();
 
-        return $result ? "Waktu berhasil disinkronkan: {$now}" : "Gagal";
+        return $result ? "Waktu berhasil disinkronkan: {$now}" : 'Gagal';
     }
 
     public function restartDevice()
     {
-        if (!$this->connect()) {
-            return "Koneksi Gagal";
+        if (! $this->connect()) {
+            return 'Koneksi Gagal';
         }
 
         $result = $this->sendCommand(self::CMD_RESTART, "\0\0", self::COMMAND_TYPE_GENERAL);
         $this->disconnect();
 
-        return $result ? "Sukses" : "Gagal";
+        return $result ? 'Sukses' : 'Gagal';
     }
 
     public function uploadNama($id, $nama)
     {
         $name = $this->normalizeName($nama);
-        if (!$this->isValidUserId($id) || $name === null) {
-            return "Gagal";
+        if (! $this->isValidUserId($id) || $name === null) {
+            return 'Gagal';
         }
 
-        if (!$this->connect()) {
-            return "Koneksi Gagal";
+        if (! $this->connect()) {
+            return 'Koneksi Gagal';
         }
 
         $record = $this->buildUserRecord($id, $name);
         $result = $this->sendCommand(self::CMD_SET_USER, $record, self::COMMAND_TYPE_GENERAL);
         $this->disconnect();
 
-        return $result ? "Sukses" : "Gagal";
+        return $result ? 'Sukses' : 'Gagal';
     }
 
     protected function normalizeName($nama)
     {
-        if (!is_string($nama) || !preg_match('//u', $nama)) {
+        if (! is_string($nama) || ! preg_match('//u', $nama)) {
             return null;
         }
 
@@ -565,15 +616,15 @@ class SolutionX100CService
     protected function buildUserRecord($id, $name)
     {
         return pack('v', (int) $id)
-            . "\0"
-            . str_repeat("\0", 8)
-            . str_pad($name, 24, "\0")
-            . str_repeat("\0", 4)
-            . "\0"
-            . str_repeat("\0", 2)
-            . str_repeat("\0", 6)
-            . str_pad((string) $id, 9, "\0")
-            . str_repeat("\0", 15);
+            ."\0"
+            .str_repeat("\0", 8)
+            .str_pad($name, 24, "\0")
+            .str_repeat("\0", 4)
+            ."\0"
+            .str_repeat("\0", 2)
+            .str_repeat("\0", 6)
+            .str_pad((string) $id, 9, "\0")
+            .str_repeat("\0", 15);
     }
 
     protected function isValidUserId($id)
